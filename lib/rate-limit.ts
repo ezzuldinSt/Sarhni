@@ -3,14 +3,30 @@ type RateLimitRecord = {
   resetTime: number;
 };
 
-// Global map to store IP hits. 
+// Global map to store IP hits.
 const rateLimitMap = new Map<string, RateLimitRecord>();
 
 // CONFIGURATION
 const WINDOW_SIZE = 60 * 1000; // 1 minute (in milliseconds)
 const MAX_REQUESTS = 5;        // Max 5 messages per minute
+const CLEANUP_INTERVAL = 60 * 1000; // Run cleanup at most once per minute
+
+let lastCleanup = Date.now();
+
+function cleanupExpired() {
+  const now = Date.now();
+  if (now - lastCleanup < CLEANUP_INTERVAL) return;
+  lastCleanup = now;
+  for (const [ip, record] of rateLimitMap) {
+    if (now > record.resetTime) {
+      rateLimitMap.delete(ip);
+    }
+  }
+}
 
 export function checkRateLimit(ip: string) {
+  cleanupExpired();
+
   const now = Date.now();
   const record = rateLimitMap.get(ip);
 
@@ -28,9 +44,9 @@ export function checkRateLimit(ip: string) {
 
   // 3. Have they exceeded the limit? Block them.
   if (record.count >= MAX_REQUESTS) {
-    return { 
-      success: false, 
-      resetAt: record.resetTime 
+    return {
+      success: false,
+      resetAt: record.resetTime
     };
   }
 
@@ -38,13 +54,3 @@ export function checkRateLimit(ip: string) {
   record.count += 1;
   return { success: true };
 }
-
-// Clean up old entries every 5 minutes to prevent memory leaks
-setInterval(() => {
-  const now = Date.now();
-  for (const [ip, record] of Array.from(rateLimitMap.entries())) {
-    if (now > record.resetTime) {
-      rateLimitMap.delete(ip);
-    }
-  }
-}, 5 * 60 * 1000); 
