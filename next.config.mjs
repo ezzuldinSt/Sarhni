@@ -10,7 +10,7 @@ const nextConfig = {
   images: {
     remotePatterns: [
       { protocol: "http", hostname: "localhost" },
-      { protocol: "https", hostname: "**" } // Allow external for Google
+      { protocol: "https", hostname: "sarhni.zhrworld.com" }
     ]
   },
   async headers() {
