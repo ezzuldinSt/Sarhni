@@ -36,7 +36,7 @@ export const ConfessionSticker = ({ confession }: { confession: any }) => {
         </div>
       </div>
        <div className="absolute bottom-6 text-leather-600 font-bold tracking-widest uppercase text-sm z-10">
-         sarhni.zhrworld.com
+         {process.env.NEXT_PUBLIC_URL?.replace(/^https?:\/\//, "") || "sarhni"}
        </div>
     </div>
   );
