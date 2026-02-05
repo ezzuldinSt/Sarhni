@@ -57,6 +57,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         token.isBanned = user.isBanned;
         token.username = (user as any).username;
         token.image = user.image;
+        token.lastChecked = Date.now();
       }
       // Refresh user data from DB on explicit update trigger
       if (trigger === "update" && token.sub) {
@@ -66,11 +67,30 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           token.isBanned = freshUser.isBanned;
           token.username = freshUser.username;
           token.image = freshUser.image;
+          token.lastChecked = Date.now();
         }
+      }
+      // Periodic refresh to catch bans and role changes (every 5 minutes)
+      const lastChecked = (token.lastChecked as number) || 0;
+      if (token.sub && Date.now() - lastChecked > 5 * 60 * 1000) {
+        const freshUser = await prisma.user.findUnique({
+          where: { id: token.sub },
+          select: { role: true, isBanned: true, username: true, image: true },
+        });
+        if (freshUser) {
+          token.role = freshUser.role;
+          token.isBanned = freshUser.isBanned;
+          token.username = freshUser.username;
+          token.image = freshUser.image;
+        }
+        token.lastChecked = Date.now();
       }
       return token;
     },
     async session({ session, token }) {
+      if (token.isBanned) {
+        return { ...session, user: undefined } as any;
+      }
       if (token.sub && session.user) {
         session.user.id = token.sub;
         session.user.name = token.username as string;
