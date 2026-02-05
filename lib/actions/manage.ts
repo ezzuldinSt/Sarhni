@@ -2,6 +2,7 @@
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
+import { Prisma } from "@prisma/client";
 
 export async function deleteConfession(confessionId: string) {
   const session = await auth();
@@ -91,4 +92,29 @@ export async function togglePin(confessionId: string) {
   revalidatePath("/dashboard");
   revalidatePath(`/u/${session.user.name}`);
   return { success: true, isPinned: !confession.isPinned };
+}
+
+export async function fetchConfessions(userId: string, page: number) {
+  const PAGE_SIZE = 10;
+
+  try {
+    const confessions = await prisma.confession.findMany({
+      where: { receiverId: userId },
+      orderBy: [
+        { isPinned: 'desc' },
+        { createdAt: 'desc' }
+      ],
+      take: PAGE_SIZE,
+      skip: page * PAGE_SIZE, // Skip the ones we already have
+      include: {
+        sender: { select: { username: true } },
+        receiver: { select: { username: true } }
+      }
+    });
+
+    return confessions;
+  } catch (error) {
+    console.error("Error fetching confessions:", error);
+    return [];
+  }
 }
