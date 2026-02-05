@@ -8,10 +8,12 @@ import { Card } from "@/components/ui/Card";
 
 export default function LoginPage() {
   const [error, setError] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    setIsLoading(true);
     const formData = new FormData(e.currentTarget);
     const username = formData.get("username") as string;
     const password = formData.get("password") as string;
@@ -24,9 +26,11 @@ export default function LoginPage() {
 
     if (res?.error) {
       setError("Invalid credentials. Try again!");
+      setIsLoading(false);
     } else {
       router.push("/dashboard");
       router.refresh();
+      // Don't stop loading here to prevent flashing
     }
   }
 
@@ -59,7 +63,7 @@ export default function LoginPage() {
               <p className="text-red-400 text-sm text-center bg-red-900/20 p-2 rounded-lg">{error}</p>
             )}
 
-            <Button type="submit" className="w-full">Login</Button>
+            <Button type="submit" className="w-full" isLoading={isLoading}>Login</Button>
           </form>
           <p className="mt-6 text-center text-sm text-leather-500">
             New here?{" "}

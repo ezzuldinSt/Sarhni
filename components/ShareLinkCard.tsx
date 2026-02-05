@@ -1,17 +1,21 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/Card";
 import { Copy, Check, Share2 } from "lucide-react";
 import { toast } from "sonner";
 
 export default function ShareLinkCard({ username }: { username: string }) {
   const [copied, setCopied] = useState(false);
+  const [origin, setOrigin] = useState("");
+
+  useEffect(() => {
+    setOrigin(window.location.origin);
+  }, []);
   
-  // Use window.location.origin to get the correct domain (localhost or production)
-  const getLink = () => `${window.location.origin}/u/${username}`;
+  const link = origin ? `${origin}/u/${username}` : `sarhni.zhrworld.com/u/${username}`;
 
   const handleCopy = () => {
-    navigator.clipboard.writeText(getLink());
+    navigator.clipboard.writeText(link);
     setCopied(true);
     toast.success("Link copied to clipboard!");
     setTimeout(() => setCopied(false), 2000);
@@ -33,7 +37,7 @@ export default function ShareLinkCard({ username }: { username: string }) {
 
         <div className="flex items-center gap-2 bg-leather-950/50 p-2 rounded-xl border border-leather-600/50">
           <code className="flex-1 text-sm text-leather-500 truncate px-2 font-mono">
-             {typeof window !== 'undefined' ? getLink() : `sarhni.com/u/${username}`}
+             {link}
           </code>
           <button 
             onClick={handleCopy}

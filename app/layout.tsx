@@ -4,7 +4,7 @@ import "./globals.css";
 import Navbar from "@/components/Navbar";
 import { Toaster } from "sonner"; // <-- IMPORT SONNER
 
-const varela = Varela_Round({ weight: "400", subsets: ["latin"] });
+const varela = Varela_Round({ weight: "400", subsets: ["latin"], display: "swap" });
 
 export const metadata: Metadata = {
   title: "Sarhni - Confess Freely",
@@ -19,7 +19,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${varela.className} bg-leather-900 text-leather-accent min-h-screen relative`}>
-        <div className="fixed inset-0 pointer-events-none opacity-[0.03] bg-leather-texture z-50 bg-repeat" />
+        <div className="fixed inset-0 pointer-events-none opacity-[0.03] bg-leather-texture z-[5] bg-repeat" />
         <Navbar />
         <main className="container mx-auto px-4 py-8">
           {children}

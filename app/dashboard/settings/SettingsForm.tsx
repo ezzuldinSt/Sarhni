@@ -34,8 +34,7 @@ export default function SettingsForm({ user }: { user: any }) {
     if (res?.success) {
         setPreview("/placeholder-avatar.png"); // Revert UI immediately
         toast.success("Profile picture removed");
-        router.refresh();
-        window.location.reload(); // Force session update
+        router.refresh(); // Refresh server data
     } else {
         toast.error("Failed to remove image");
         setUploading(false);
@@ -69,7 +68,6 @@ export default function SettingsForm({ user }: { user: any }) {
 
       toast.success("Profile updated successfully!");
       router.refresh();
-      window.location.reload();
 
     } catch (error) {
       console.error(error);

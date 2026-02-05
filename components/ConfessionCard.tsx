@@ -7,10 +7,11 @@ import { Share2, Loader2, Trash2, MessageCircle, Pin } from "lucide-react";
 import html2canvas from "html2canvas";
 import { toast } from "sonner";
 import { ConfessionSticker } from "./ConfessionSticker";
-import { deleteConfession, replyToConfession, togglePin } from "@/lib/actions/manage";
+import { useConfessionActions } from "@/hooks/useConfessionActions";
+import { ConfessionWithUser } from "@/lib/types";
 
 interface ConfessionCardProps {
-  confession: any;
+  confession: ConfessionWithUser;
   index: number;
   isOwnerView?: boolean;
 }
@@ -19,17 +20,22 @@ export default function ConfessionCard({ confession, index, isOwnerView = false 
   const date = new Date(confession.createdAt).toLocaleDateString();
   const stickerRef = useRef<HTMLDivElement>(null);
   
-  // -- State Management --
+  // -- Local UI State --
   const [isGenerating, setIsGenerating] = useState(false); // Sharing
-  const [isDeleting, setIsDeleting] = useState(false);     // Deleting
   const [isReplying, setIsReplying] = useState(false);     // Toggling Reply Form
   const [replyText, setReplyText] = useState("");          // Reply Input
   
-  // Optimistic UI States
-  const [optimisticReply, setOptimisticReply] = useState(confession.reply);
-  const [isPinned, setIsPinned] = useState(confession.isPinned);
+  // -- Business Logic Hook --
+  const { 
+    isDeleting, 
+    isPinned, 
+    optimisticReply, 
+    handleDelete, 
+    handlePin, 
+    handleReply 
+  } = useConfessionActions(confession.isPinned, confession.reply);
 
-  // --- 1. Share Logic ---
+  // --- 1. Share Logic (Kept Local due to Ref) ---
   const handleShare = async () => {
     if (!stickerRef.current || isGenerating) return;
     
@@ -65,52 +71,10 @@ export default function ConfessionCard({ confession, index, isOwnerView = false 
     }
   };
 
-  // --- 2. Delete Logic ---
-  const handleDelete = async () => {
-    if (!confirm("Are you sure you want to delete this message? This cannot be undone.")) return;
-
-    setIsDeleting(true); // Fade out
-    const res = await deleteConfession(confession.id);
-    
-    if (res?.error) {
-        toast.error(res.error);
-        setIsDeleting(false);
-    } else {
-        toast.success("Message deleted forever.");
-    }
-  };
-
-  // --- 3. Pin Logic ---
-  const handlePin = async () => {
-    const newState = !isPinned;
-    setIsPinned(newState); // Optimistic Toggle
-    
-    const res = await togglePin(confession.id);
-    
-    if (res?.error) {
-      toast.error(res.error);
-      setIsPinned(!newState); // Revert
-    } else {
-      toast.success(newState ? "Pinned to profile!" : "Unpinned.");
-    }
-  };
-
-  // --- 4. Reply Logic ---
-  const handleReplySubmit = async (e: React.FormEvent) => {
+  // --- 2. Reply Wrapper ---
+  const onReplySubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!replyText.trim()) return;
-
-    const loading = toast.loading("Posting reply...");
-    const res = await replyToConfession(confession.id, replyText);
-    
-    if (res?.error) {
-      toast.error(res.error);
-    } else {
-      toast.success("Reply posted!");
-      setOptimisticReply(replyText);
-      setIsReplying(false);
-    }
-    toast.dismiss(loading);
+    handleReply(confession.id, replyText, () => setIsReplying(false));
   };
 
   return (
@@ -133,11 +97,12 @@ export default function ConfessionCard({ confession, index, isOwnerView = false 
 
         {/* --- Header Controls (Owner View Only) --- */}
         {isOwnerView && (
-           <div className="absolute top-4 right-4 flex gap-2 opacity-0 group-hover:opacity-100 transition-all z-10">
+           <div className="absolute top-4 right-4 flex gap-2 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-all z-10">
              
              {/* Pin Button */}
              <button 
-               onClick={handlePin}
+               onClick={() => handlePin(confession.id)}
+               aria-label={isPinned ? "Unpin message" : "Pin message"}
                className={`p-2 rounded-full shadow-lg transition-colors ${
                  isPinned 
                    ? "bg-leather-pop text-leather-900 hover:bg-leather-popHover" 
@@ -150,8 +115,9 @@ export default function ConfessionCard({ confession, index, isOwnerView = false 
 
              {/* Delete Button */}
              <button 
-               onClick={handleDelete}
+               onClick={() => handleDelete(confession.id)}
                disabled={isDeleting || isGenerating}
+               aria-label="Delete message"
                className="p-2 bg-leather-800 text-red-400 rounded-full hover:bg-red-500 hover:text-white shadow-lg disabled:opacity-50 transition-colors"
                title="Delete Message"
              >
@@ -162,6 +128,7 @@ export default function ConfessionCard({ confession, index, isOwnerView = false 
              <button 
                onClick={handleShare}
                disabled={isGenerating || isDeleting}
+               aria-label="Generate shareable sticker"
                className="p-2 bg-leather-800 text-leather-pop rounded-full hover:bg-leather-pop hover:text-leather-900 shadow-lg disabled:opacity-50 transition-colors"
                title="Generate Story Sticker"
              >
@@ -196,13 +163,14 @@ export default function ConfessionCard({ confession, index, isOwnerView = false 
             {!isReplying ? (
               <button 
                 onClick={() => setIsReplying(true)}
+                aria-label="Open reply form"
                 className="text-xs font-bold text-leather-500 hover:text-leather-pop flex items-center gap-2 transition-colors"
               >
                 <MessageCircle size={14} /> 
                 Reply to this message
               </button>
             ) : (
-              <form onSubmit={handleReplySubmit} className="flex gap-2 animate-in fade-in slide-in-from-top-2">
+              <form onSubmit={onReplySubmit} className="flex gap-2 animate-in fade-in slide-in-from-top-2">
                 <input 
                   autoFocus
                   className="bg-leather-900/80 rounded-lg px-3 py-2 text-sm w-full outline-none focus:ring-1 focus:ring-leather-pop text-leather-accent placeholder-leather-600"

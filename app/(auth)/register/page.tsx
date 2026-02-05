@@ -1,5 +1,5 @@
 "use client";
-import { useFormState } from "react-dom";
+import { useFormState, useFormStatus } from "react-dom";
 import Link from "next/link";
 import { registerUser } from "@/lib/actions/auth";
 import { Button } from "@/components/ui/Button";
@@ -39,7 +39,7 @@ export default function RegisterPage() {
               <p className="text-red-400 text-sm text-center bg-red-900/20 p-2 rounded-lg">{state.error}</p>
             )}
 
-            <Button type="submit" className="w-full">Create Account</Button>
+            <SubmitButton />
           </form>
           <p className="mt-6 text-center text-sm text-leather-500">
             Already have an account?{" "}
@@ -50,5 +50,14 @@ export default function RegisterPage() {
         </Card>
       </div>
     </div>
+  );
+}
+
+function SubmitButton() {
+  const { pending } = useFormStatus();
+  return (
+    <Button type="submit" className="w-full" isLoading={pending}>
+      Create Account
+    </Button>
   );
 }

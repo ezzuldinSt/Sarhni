@@ -4,16 +4,16 @@ import { useState, useEffect, useRef } from "react";
 import ConfessionCard from "./ConfessionCard";
 import { fetchConfessions } from "@/lib/actions/manage";
 import { Loader2 } from "lucide-react";
+import { ConfessionWithUser } from "@/lib/types";
 
 interface ConfessionFeedProps {
-  initialConfessions: any[];
+  initialConfessions: ConfessionWithUser[];
   userId: string;
   isOwner: boolean;
 }
 
 export default function ConfessionFeed({ initialConfessions, userId, isOwner }: ConfessionFeedProps) {
-  const [confessions, setConfessions] = useState(initialConfessions);
-  const [page, setPage] = useState(1);
+  const [confessions, setConfessions] = useState<ConfessionWithUser[]>(initialConfessions);
   const [hasMore, setHasMore] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
   
@@ -28,10 +28,11 @@ export default function ConfessionFeed({ initialConfessions, userId, isOwner }: 
     const observer = new IntersectionObserver(
       async (entries) => {
         const target = entries[0];
-        if (target.isIntersecting && hasMore && !isLoading) {
+        if (target.isIntersecting && hasMore && !isLoading && confessions.length > 0) {
           setIsLoading(true);
           
-          const newConfessions = await fetchConfessions(userId, page);
+          const lastId = confessions[confessions.length - 1].id;
+          const newConfessions = await fetchConfessions(userId, lastId);
           
           if (newConfessions.length === 0) {
             setHasMore(false);
@@ -40,9 +41,9 @@ export default function ConfessionFeed({ initialConfessions, userId, isOwner }: 
             setConfessions((prev) => {
                 const existingIds = new Set(prev.map(c => c.id));
                 const uniqueNew = newConfessions.filter((c: any) => !existingIds.has(c.id));
+                if (uniqueNew.length === 0) setHasMore(false); // Stop if no new unique items
                 return [...prev, ...uniqueNew];
             });
-            setPage((prev) => prev + 1);
           }
           
           setIsLoading(false);
@@ -56,7 +57,7 @@ export default function ConfessionFeed({ initialConfessions, userId, isOwner }: 
     }
 
     return () => observer.disconnect();
-  }, [page, hasMore, isLoading, userId]);
+  }, [hasMore, isLoading, userId, confessions]);
 
   return (
     <div className="space-y-6">
@@ -72,8 +73,19 @@ export default function ConfessionFeed({ initialConfessions, userId, isOwner }: 
 
       {/* 2. Empty State */}
       {confessions.length === 0 && (
-          <div className="text-center py-12 text-leather-500 border-2 border-dashed border-leather-600/30 rounded-3xl">
-             No confessions yet. Share your link!
+          <div className="flex flex-col items-center justify-center py-16 px-4 text-center border-2 border-dashed border-leather-600/30 rounded-3xl bg-leather-800/10">
+             <div className="w-16 h-16 bg-leather-800 rounded-full flex items-center justify-center mb-4 text-3xl">
+               👻
+             </div>
+             <h3 className="text-xl font-bold text-leather-accent mb-2">
+               {isOwner ? "It's quiet... too quiet." : "No confessions yet!"}
+             </h3>
+             <p className="text-leather-500 max-w-xs mx-auto">
+               {isOwner 
+                 ? "Share your profile link to start receiving mysterious messages." 
+                 : "Be the first to break the silence. Send a confession now!"
+               }
+             </p>
           </div>
       )}
 

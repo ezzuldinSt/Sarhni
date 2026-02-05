@@ -18,7 +18,10 @@ export default async function DashboardPage() {
       },
       receivedConfessions: {
         orderBy: { createdAt: 'desc' },
-        include: { sender: { select: { username: true, image: true } } }
+        include: { 
+          sender: { select: { username: true, image: true } },
+          receiver: { select: { username: true } }
+        }
       },
       sentConfessions: {
         orderBy: { createdAt: 'desc' },

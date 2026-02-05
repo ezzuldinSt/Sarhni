@@ -8,41 +8,49 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// 1. Define the Roles
+enum Role {
+  USER
+  ADMIN
+  OWNER
+}
+
 model User {
   id            String       @id @default(cuid())
   username      String       @unique
-  password      String?      // Nullable for OAuth
+  password      String?      
   image         String?
   bio           String?
+  
+  // 2. Add Role & Ban fields
+  role          Role         @default(USER)
+  isBanned      Boolean      @default(false)
+  
   createdAt     DateTime     @default(now())
   
   sentConfessions     Confession[] @relation("SentConfessions")
   receivedConfessions Confession[] @relation("ReceivedConfessions")
 
-  // FIX: Index on username for faster login/search
   @@index([username])
 }
 
 model Confession {
   id          String   @id @default(cuid())
   content     String
-  reply       String?  // Null means no reply yet
+  reply       String?  
   replyAt     DateTime?
   isPinned    Boolean  @default(false) 
   isAnonymous Boolean  @default(true)
   createdAt   DateTime @default(now())
 
   senderId    String?
-  sender      User?    @relation("SentConfessions", fields: [senderId], references: [id])
+  sender      User?    @relation("SentConfessions", fields: [senderId], references: [id], onDelete: Cascade)
   
   receiverId  String
-  receiver    User     @relation("ReceivedConfessions", fields: [receiverId], references: [id])
+  receiver    User     @relation("ReceivedConfessions", fields: [receiverId], references: [id], onDelete: Cascade)
 
-  // FIX: Indexes for performance
-  // 1. Essential for "Get my messages" (Dashboard)
   @@index([receiverId])
-  // 2. Essential for "Show messages I sent"
   @@index([senderId])
-  // 3. Optimization for Public Profile (Pinned messages first)
-  @@index([receiverId, isPinned])
+  @@index([receiverId, isPinned, createdAt])
 }
+

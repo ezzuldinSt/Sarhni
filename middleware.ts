@@ -5,7 +5,7 @@ export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   // 1. Define protected and public routes
-  const isDashboard = pathname.startsWith("/dashboard");
+  const isProtected = pathname.startsWith("/dashboard") || pathname.startsWith("/admin") || pathname.startsWith("/owner");
   const isAuthPage = pathname === "/login" || pathname === "/register";
 
   // 2. Check for session token
@@ -17,7 +17,7 @@ export function middleware(request: NextRequest) {
     request.cookies.get("next-auth.session-token")?.value; // Fallback for older versions
 
   // 3. Logic: Redirect Unauthenticated Users
-  if (isDashboard && !token) {
+  if (isProtected && !token) {
     const loginUrl = new URL("/login", request.url);
     // Optional: Add ?callbackUrl= to redirect them back after login
     loginUrl.searchParams.set("callbackUrl", pathname);

@@ -6,7 +6,13 @@ import fs from "node:fs/promises";
 import path from "node:path";
 
 export async function updateUserProfile(formData: FormData) {
+  const session = await auth();
   const userId = formData.get("userId") as string;
+
+  if (!session || session.user.id !== userId) {
+    throw new Error("Unauthorized");
+  }
+
   const bio = formData.get("bio") as string;
   const imageUrl = formData.get("imageUrl") as string; // Will come from the client logic
 

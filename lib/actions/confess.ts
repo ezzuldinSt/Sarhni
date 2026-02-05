@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 import { checkRateLimit } from "@/lib/rate-limit";
+import { auth } from "@/lib/auth";
 
 const schema = z.object({
   content: z.string().min(1, "Message cannot be empty").max(500, "Message is too long"),
@@ -65,12 +66,15 @@ export async function sendConfession(formData: FormData) {
     
     if (!receiver) return { error: "User not found." };
 
+    const session = await auth();
+    const realSenderId = (!isAnonymous && session?.user?.id) ? session.user.id : null;
+
     await prisma.confession.create({
       data: {
         content,
         receiverId,
         isAnonymous,
-        senderId: null, 
+        senderId: realSenderId, 
       },
     });
 

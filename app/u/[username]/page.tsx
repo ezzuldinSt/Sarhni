@@ -5,6 +5,26 @@ import ConfessionForm from "@/components/ConfessionForm";
 import { Card } from "@/components/ui/Card";
 import Image from "next/image";
 import ConfessionFeed from "@/components/ConfessionFeed"; // <--- Import the Feed
+import type { Metadata } from "next";
+
+export async function generateMetadata({ params }: { params: Promise<{ username: string }> }): Promise<Metadata> {
+  const { username } = await params;
+  const user = await prisma.user.findUnique({
+    where: { username },
+    select: { bio: true }
+  });
+
+  if (!user) {
+    return {
+      title: "User Not Found - Sarhni",
+    };
+  }
+
+  return {
+    title: `Confess to @${username} - Sarhni`,
+    description: user.bio || `Send a secret message to @${username}.`,
+  };
+}
 
 export default async function UserProfile({ params }: { params: Promise<{ username: string }> }) {
   const { username } = await params;
@@ -44,7 +64,6 @@ export default async function UserProfile({ params }: { params: Promise<{ userna
                  alt={user.username} 
                  fill 
                  className="object-cover"
-                 unoptimized 
                />
             </div>
             <h1 className="text-3xl font-bold text-leather-accent mb-2">@{user.username}</h1>

@@ -59,6 +59,7 @@ export default function UserSearch({ className }: { className?: string }) {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-leather-500 group-focus-within:text-leather-pop transition-colors" />
             <input
                 type="text"
+                aria-label="Search users"
                 placeholder="Find a soul..."
                 className="w-full bg-leather-900 border border-leather-600/50 rounded-full py-2 pl-10 pr-4 text-sm text-leather-accent placeholder-leather-600 focus:outline-none focus:ring-1 focus:ring-leather-pop focus:border-leather-pop transition-all"
                 value={query}
@@ -86,7 +87,6 @@ export default function UserSearch({ className }: { className?: string }) {
                                   alt={user.username}
                                   fill
                                   className="object-cover"
-                                  unoptimized // Important for your Docker setup
                               />
                           </div>
                           <span className="text-sm font-bold text-leather-accent group-hover:text-white truncate">

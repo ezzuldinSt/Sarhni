@@ -12,6 +12,18 @@ const nextConfig = {
       { protocol: "http", hostname: "localhost" },
       { protocol: "https", hostname: "**" } // Allow external for Google
     ]
+  },
+  async headers() {
+    return [
+      {
+        source: "/:path*",
+        headers: [
+          { key: "X-Content-Type-Options", value: "nosniff" },
+          { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+          { key: "X-Frame-Options", value: "DENY" }
+        ]
+      }
+    ];
   }
 };
 export default nextConfig;

@@ -9,7 +9,7 @@ import { Card } from "./ui/Card";
 import { Switch } from "./ui/Switch";
 import { sendConfession } from "@/lib/actions/confess";
 import { toast } from "sonner";
-import { Send, Loader2 } from "lucide-react";
+import { Send } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
 const schema = z.object({
@@ -20,9 +20,12 @@ export default function ConfessionForm({ receiverId, usernamePath, user }: { rec
   const [isAnon, setIsAnon] = useState(true);
   const [isSent, setIsSent] = useState(false); // New state for success view
   
-  const { register, handleSubmit, reset, formState: { errors, isSubmitting } } = useForm({
+  const { register, handleSubmit, reset, watch, formState: { errors, isSubmitting } } = useForm({
     resolver: zodResolver(schema)
   });
+
+  const contentValue = watch("content", "");
+  const charCount = contentValue.length;
 
   const onSubmit = async (data: any) => {
     // 1. OPTIMISTIC UPDATE: Show success immediately
@@ -97,8 +100,8 @@ export default function ConfessionForm({ receiverId, usernamePath, user }: { rec
                 <label className="text-leather-accent/80 text-sm font-bold uppercase tracking-widest">
                 Leave a message
                 </label>
-                <span className="text-xs text-leather-500 font-mono">
-                    {/* Character count could go here */}
+                <span className={`text-xs font-mono transition-colors ${charCount > 450 ? 'text-red-400 font-bold' : 'text-leather-500'}`}>
+                    {charCount}/500
                 </span>
             </div>
 
@@ -120,12 +123,10 @@ export default function ConfessionForm({ receiverId, usernamePath, user }: { rec
                 </div>
             </div>
             
-            <Button type="submit" disabled={isSubmitting} className="group">
-                {isSubmitting ? <Loader2 className="animate-spin" /> : (
-                    <span className="flex items-center gap-2">
-                        Send <Send size={16} className="group-hover:translate-x-1 transition-transform" />
-                    </span>
-                )}
+            <Button type="submit" isLoading={isSubmitting} className="group">
+                <span className="flex items-center gap-2">
+                    Send <Send size={16} className="group-hover:translate-x-1 transition-transform" />
+                </span>
             </Button>
             </div>
         </motion.form>

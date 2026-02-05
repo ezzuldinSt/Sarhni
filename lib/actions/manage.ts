@@ -94,8 +94,8 @@ export async function togglePin(confessionId: string) {
   return { success: true, isPinned: !confession.isPinned };
 }
 
-export async function fetchConfessions(userId: string, page: number) {
-  const PAGE_SIZE = 10;
+export async function fetchConfessions(userId: string, cursorId?: string) {
+  const PAGE_SIZE = 12;
 
   try {
     const confessions = await prisma.confession.findMany({
@@ -105,7 +105,8 @@ export async function fetchConfessions(userId: string, page: number) {
         { createdAt: 'desc' }
       ],
       take: PAGE_SIZE,
-      skip: page * PAGE_SIZE, // Skip the ones we already have
+      skip: cursorId ? 1 : 0,
+      cursor: cursorId ? { id: cursorId } : undefined,
       include: {
         sender: { select: { username: true } },
         receiver: { select: { username: true } }

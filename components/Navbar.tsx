@@ -38,7 +38,8 @@ export default async function Navbar() {
                 {/* FIX: Removed size="sm", added h-8 px-3 text-xs manually */}
                 <Button 
                   variant="secondary" 
-                  className="ml-2 h-8 px-3 text-xs bg-transparent border border-red-900/30 text-red-400 hover:bg-red-900/20 hover:text-red-300 shadow-none"
+                  size="sm"
+                  className="ml-2 bg-transparent border border-red-900/30 text-red-400 hover:bg-red-900/20 hover:text-red-300 shadow-none"
                 >
                   Sign Out
                 </Button>
@@ -51,7 +52,7 @@ export default async function Navbar() {
               </Link>
               <Link href="/register">
                 {/* FIX: Removed size="sm", added h-8 px-3 text-xs manually */}
-                <Button className="h-8 px-3 text-xs bg-leather-pop text-leather-900 hover:bg-leather-popHover">
+                <Button size="sm" className="bg-leather-pop text-leather-900 hover:bg-leather-popHover">
                   Get Started
                 </Button>
               </Link>

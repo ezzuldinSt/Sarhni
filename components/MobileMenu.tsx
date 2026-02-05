@@ -88,6 +88,8 @@ export default function MobileMenu({ session }: { session: any }) {
                 dragElastic={{ left: 0, right: 0.5 }} // Rubber band effect on right pull
                 onDragEnd={handleDragEnd} // Detect swipe finish
                 // ----------------------
+                role="dialog"
+                aria-modal="true"
                 style={{ backgroundColor: "#2C1A1D" }}
                 className="fixed top-0 right-0 bottom-0 w-[80%] max-w-sm z-[9999] shadow-2xl flex flex-col p-6 border-l border-leather-600 touch-pan-x"
               >
