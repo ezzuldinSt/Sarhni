@@ -64,7 +64,7 @@ Two models: `User` and `Confession`. Three roles: `USER`, `ADMIN`, `OWNER`. Conf
 
 ## Environment Variables
 
-Required: `DATABASE_URL`, `AUTH_SECRET`, `NEXT_PUBLIC_URL`. For Docker: also `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB`.
+Required: `DATABASE_URL`, `AUTH_SECRET`, `NEXT_PUBLIC_URL`. Optional: `OWNER_USERNAME` (auto-promotes this username to OWNER on registration). For Docker: also `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB`.
 
 ## Docker
 

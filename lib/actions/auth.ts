@@ -20,16 +20,15 @@ export async function registerUser(prevState: any, formData: FormData) {
   const normalizedUsername = username.toLowerCase();
   const hashedPassword = await bcrypt.hash(password, 10);
 
-  // FIX: Auto-promote "zhr" to OWNER
-  // We use the Enum 'Role' from Prisma (imported automatically or passed as string)
-  const role = normalizedUsername === "zhr" ? "OWNER" : "USER";
+  const ownerUsername = process.env.OWNER_USERNAME?.toLowerCase();
+  const role = ownerUsername && normalizedUsername === ownerUsername ? "OWNER" : "USER";
 
   try {
     await prisma.user.create({
       data: {
         username: normalizedUsername,
         password: hashedPassword,
-        role: role, // <--- Assign Role
+        role: role,
       },
     });
   } catch (e) {
