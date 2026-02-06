@@ -1,6 +1,6 @@
 "use server";
 import { prisma } from "@/lib/prisma";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { auth } from "@/lib/auth";
 import fs from "node:fs/promises";
 import path from "node:path";
@@ -24,8 +24,9 @@ export async function updateUserProfile(formData: FormData) {
     data: data,
   });
 
-  revalidatePath("/dashboard/settings");
-  revalidatePath(`/u/${userId}`); // Just in case
+  revalidateTag("user-profiles", "max");
+  revalidatePath("/dashboard/settings", "page");
+  revalidatePath(`/u/${userId}`, "page");
   return { success: true };
 }
 
@@ -67,8 +68,9 @@ export async function deleteProfileImage() {
     data: { image: null },
   });
 
-  revalidatePath("/dashboard/settings");
-  revalidatePath(`/u/${session.user.name}`);
+  revalidateTag("user-profiles", "max");
+  revalidatePath("/dashboard/settings", "page");
+  revalidatePath(`/u/${session.user.name}`, "page");
   return { success: true };
 }
 

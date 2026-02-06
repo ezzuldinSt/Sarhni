@@ -1,7 +1,7 @@
 "use server";
-import { prisma } from "@/lib/prisma";
 import { headers } from "next/headers";
 import { createRateLimiter } from "@/lib/rate-limit";
+import { getCachedSearchResults } from "@/lib/cache";
 
 // 20 searches per minute — generous for typing, tight enough to block scraping
 const checkSearchLimit = createRateLimiter(20, 60 * 1000);
@@ -21,24 +21,9 @@ export async function searchUsers(query: string) {
   }
 
   try {
-    const users = await prisma.user.findMany({
-      where: {
-        username: {
-          contains: query,
-          mode: 'insensitive',
-        },
-        isBanned: false,
-      },
-      select: {
-        username: true,
-        image: true,
-      },
-      take: 5,
-    });
-    return users;
+    return await getCachedSearchResults(query);
   } catch (error) {
     console.error("Search error:", error);
     return [];
   }
 }
-

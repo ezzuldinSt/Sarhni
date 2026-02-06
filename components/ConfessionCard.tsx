@@ -1,10 +1,8 @@
 "use client";
 
-import { useRef, useState } from "react";
-import { motion } from "framer-motion";
+import { memo, useRef, useState } from "react";
 import { Card } from "./ui/Card";
 import { Share2, Loader2, Trash2, MessageCircle, Pin } from "lucide-react";
-import html2canvas from "html2canvas";
 import { toast } from "sonner";
 import { ConfessionSticker } from "./ConfessionSticker";
 import { useConfessionActions } from "@/hooks/useConfessionActions";
@@ -16,50 +14,51 @@ interface ConfessionCardProps {
   isOwnerView?: boolean;
 }
 
-export default function ConfessionCard({ confession, index, isOwnerView = false }: ConfessionCardProps) {
+function ConfessionCardInner({ confession, index, isOwnerView = false }: ConfessionCardProps) {
   const date = new Date(confession.createdAt).toLocaleDateString();
   const stickerRef = useRef<HTMLDivElement>(null);
-  
+
   // -- Local UI State --
   const [isGenerating, setIsGenerating] = useState(false); // Sharing
   const [isReplying, setIsReplying] = useState(false);     // Toggling Reply Form
   const [replyText, setReplyText] = useState("");          // Reply Input
-  
+
   // -- Business Logic Hook --
-  const { 
-    isDeleting, 
-    isPinned, 
-    optimisticReply, 
-    handleDelete, 
-    handlePin, 
-    handleReply 
+  const {
+    isDeleting,
+    isPinned,
+    optimisticReply,
+    handleDelete,
+    handlePin,
+    handleReply
   } = useConfessionActions(confession.isPinned, confession.reply);
 
   // --- 1. Share Logic (Kept Local due to Ref) ---
   const handleShare = async () => {
     if (!stickerRef.current || isGenerating) return;
-    
+
     setIsGenerating(true);
     const loading = toast.loading("Generating sticker...", { id: "sticker-toast" });
 
     try {
+      const { default: html2canvas } = await import("html2canvas");
       const canvas = await html2canvas(stickerRef.current, {
         backgroundColor: "#2C1A1D", // Match theme background
         scale: 2, // High resolution
         logging: false,
-        useCORS: true 
+        useCORS: true
       });
 
       canvas.toBlob((blob) => {
         if (!blob) throw new Error("Image generation failed");
-        
+
         const url = URL.createObjectURL(blob);
         const link = document.createElement('a');
         link.download = `sarhni-confession-${confession.id.slice(0, 6)}.jpg`;
         link.href = url;
         link.click();
         URL.revokeObjectURL(url);
-        
+
         toast.success("Sticker saved!", { id: "sticker-toast" });
       }, 'image/jpeg', 0.9);
 
@@ -80,14 +79,12 @@ export default function ConfessionCard({ confession, index, isOwnerView = false 
   return (
     <>
     {/* Main Card Display */}
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: isDeleting ? 0 : 1, y: 0 }}
-      transition={{ delay: index * 0.1 }}
-      className={`h-full ${isDeleting ? "pointer-events-none" : ""}`}
+    <div
+      className={`h-full animate-in fade-in slide-in-from-bottom-4 transition-opacity duration-300 ${isDeleting ? "opacity-0 pointer-events-none" : ""}`}
+      style={{ animationDelay: `${index * 100}ms`, animationDuration: "400ms", animationFillMode: "both" }}
     >
       <Card className="h-full flex flex-col bg-leather-700/50 border-leather-600 hover:border-leather-pop/50 transition-colors relative group">
-        
+
         {/* --- Visual Pin Indicator (Always Visible if Pinned) --- */}
         {isPinned && (
           <div className="absolute -top-2 -left-2 bg-leather-pop text-leather-900 p-1.5 rounded-full shadow-lg z-20 rotate-[-15deg] border-2 border-leather-900">
@@ -98,14 +95,14 @@ export default function ConfessionCard({ confession, index, isOwnerView = false 
         {/* --- Header Controls (Owner View Only) --- */}
         {isOwnerView && (
            <div className="absolute top-4 right-4 flex gap-2 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-all z-10">
-             
+
              {/* Pin Button */}
-             <button 
+             <button
                onClick={() => handlePin(confession.id)}
                aria-label={isPinned ? "Unpin message" : "Pin message"}
                className={`p-2 rounded-full shadow-lg transition-colors ${
-                 isPinned 
-                   ? "bg-leather-pop text-leather-900 hover:bg-leather-popHover" 
+                 isPinned
+                   ? "bg-leather-pop text-leather-900 hover:bg-leather-popHover"
                    : "bg-leather-800 text-leather-500 hover:text-leather-pop"
                }`}
                title={isPinned ? "Unpin" : "Pin to Top"}
@@ -114,7 +111,7 @@ export default function ConfessionCard({ confession, index, isOwnerView = false 
              </button>
 
              {/* Delete Button */}
-             <button 
+             <button
                onClick={() => handleDelete(confession.id)}
                disabled={isDeleting || isGenerating}
                aria-label="Delete message"
@@ -125,7 +122,7 @@ export default function ConfessionCard({ confession, index, isOwnerView = false 
              </button>
 
              {/* Share Button */}
-             <button 
+             <button
                onClick={handleShare}
                disabled={isGenerating || isDeleting}
                aria-label="Generate shareable sticker"
@@ -161,31 +158,31 @@ export default function ConfessionCard({ confession, index, isOwnerView = false 
         {isOwnerView && !optimisticReply && (
           <div className="mt-auto pt-4 border-t border-leather-600/30">
             {!isReplying ? (
-              <button 
+              <button
                 onClick={() => setIsReplying(true)}
                 aria-label="Open reply form"
                 className="text-xs font-bold text-leather-500 hover:text-leather-pop flex items-center gap-2 transition-colors"
               >
-                <MessageCircle size={14} /> 
+                <MessageCircle size={14} />
                 Reply to this message
               </button>
             ) : (
               <form onSubmit={onReplySubmit} className="flex gap-2 animate-in fade-in slide-in-from-top-2">
-                <input 
+                <input
                   autoFocus
                   className="bg-leather-900/80 rounded-lg px-3 py-2 text-sm w-full outline-none focus:ring-1 focus:ring-leather-pop text-leather-accent placeholder-leather-600"
                   placeholder="Type your comeback..."
                   value={replyText}
                   onChange={(e) => setReplyText(e.target.value)}
                 />
-                <button 
-                  type="submit" 
+                <button
+                  type="submit"
                   disabled={!replyText.trim()}
                   className="text-xs bg-leather-pop text-leather-900 font-bold px-3 rounded-lg hover:bg-leather-popHover disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 >
                   Post
                 </button>
-                <button 
+                <button
                    type="button"
                    onClick={() => setIsReplying(false)}
                    className="text-xs text-leather-500 hover:text-red-400 px-2"
@@ -211,7 +208,7 @@ export default function ConfessionCard({ confession, index, isOwnerView = false 
         </div>
 
       </Card>
-    </motion.div>
+    </div>
 
     {/* Hidden Sticker for Capture (Only needed in Dashboard View) */}
     {isOwnerView && (
@@ -224,3 +221,16 @@ export default function ConfessionCard({ confession, index, isOwnerView = false 
     </>
   );
 }
+
+const ConfessionCard = memo(ConfessionCardInner, (prev, next) => {
+  return (
+    prev.confession.id === next.confession.id &&
+    prev.confession.isPinned === next.confession.isPinned &&
+    prev.confession.reply === next.confession.reply &&
+    prev.confession.content === next.confession.content &&
+    prev.index === next.index &&
+    prev.isOwnerView === next.isOwnerView
+  );
+});
+
+export default ConfessionCard;

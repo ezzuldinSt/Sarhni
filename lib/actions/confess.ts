@@ -2,7 +2,7 @@
 
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { headers } from "next/headers";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { auth } from "@/lib/auth";
@@ -78,8 +78,9 @@ export async function sendConfession(formData: FormData) {
       },
     });
 
-    revalidatePath(`/u/${usernamePath}`);
-    revalidatePath("/dashboard");
+    revalidateTag("user-profiles", "max");
+    revalidatePath(`/u/${usernamePath}`, "page");
+    revalidatePath("/dashboard", "page");
     
     return { success: true };
   } catch (error) {

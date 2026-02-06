@@ -1,24 +1,19 @@
-"use client";
-import { motion } from "framer-motion";
-
 export const GlitchText = ({ text, className = "" }: { text: string; className?: string }) => {
   return (
     <div className={`relative inline-block group overflow-visible ${className}`}>
       <span className="relative z-10">{text}</span>
-      <motion.span
-        className={`absolute top-0 left-0 -z-10 text-leather-pop opacity-0 group-hover:opacity-100 ${className}`}
-        animate={{ x: [-2, 2, -2], y: [1, -1, 0] }}
-        transition={{ repeat: Infinity, duration: 0.2 }}
+      <span
+        className={`absolute top-0 left-0 -z-10 text-leather-pop opacity-0 group-hover:opacity-100 group-hover:animate-glitch-1 ${className}`}
+        aria-hidden="true"
       >
         {text}
-      </motion.span>
-      <motion.span
-        className={`absolute top-0 left-0 -z-10 text-red-500 opacity-0 group-hover:opacity-100 ${className}`}
-        animate={{ x: [2, -2, 2], y: [-1, 1, 0] }}
-        transition={{ repeat: Infinity, duration: 0.3 }}
+      </span>
+      <span
+        className={`absolute top-0 left-0 -z-10 text-red-500 opacity-0 group-hover:opacity-100 group-hover:animate-glitch-2 ${className}`}
+        aria-hidden="true"
       >
         {text}
-      </motion.span>
+      </span>
     </div>
   );
-}
+};

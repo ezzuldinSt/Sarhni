@@ -86,6 +86,7 @@ export default function UserSearch({ className }: { className?: string }) {
                                   src={user.image || "/placeholder-avatar.png"}
                                   alt={user.username}
                                   fill
+                                  sizes="32px"
                                   className="object-cover"
                               />
                           </div>

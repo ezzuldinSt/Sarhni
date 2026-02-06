@@ -7,7 +7,10 @@ export default async function SettingsPage() {
   const session = await auth();
   if (!session) redirect("/login");
 
-  const user = await prisma.user.findUnique({ where: { id: session.user?.id } });
+  const user = await prisma.user.findUnique({
+    where: { id: session.user?.id },
+    select: { id: true, username: true, image: true, bio: true }
+  });
 
   return (
     <div className="max-w-xl mx-auto">

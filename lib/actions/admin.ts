@@ -2,7 +2,8 @@
 
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
+import { getCachedAdminUsers } from "@/lib/cache";
 
 // --- HELPERS ---
 async function getCurrentRole() {
@@ -15,14 +16,7 @@ export async function getAllUsers(query: string = "") {
   const role = await getCurrentRole();
   if (role !== "ADMIN" && role !== "OWNER") return [];
 
-  return await prisma.user.findMany({
-    where: {
-      username: { contains: query, mode: "insensitive" }
-    },
-    orderBy: { createdAt: "desc" },
-    take: 50,
-    select: { id: true, username: true, role: true, isBanned: true, createdAt: true }
-  });
+  return await getCachedAdminUsers(query);
 }
 
 // --- 2. BAN HAMMER ---
@@ -33,7 +27,10 @@ export async function toggleBan(targetUserId: string) {
   if (actorRole !== "ADMIN" && actorRole !== "OWNER") return { error: "Unauthorized" };
 
   // Fetch target
-  const target = await prisma.user.findUnique({ where: { id: targetUserId } });
+  const target = await prisma.user.findUnique({
+    where: { id: targetUserId },
+    select: { id: true, role: true, isBanned: true }
+  });
   if (!target) return { error: "User not found" };
 
   // HIERARCHY CHECK
@@ -52,8 +49,10 @@ export async function toggleBan(targetUserId: string) {
     data: { isBanned: !target.isBanned }
   });
 
-  revalidatePath("/admin");
-  revalidatePath("/owner");
+  revalidateTag("admin-users", "max");
+  revalidateTag("user-search", "max");
+  revalidatePath("/admin", "page");
+  revalidatePath("/owner", "page");
   return { success: true };
 }
 
@@ -68,7 +67,8 @@ export async function updateUserRole(targetUserId: string, newRole: "USER" | "AD
     data: { role: newRole }
   });
 
-  revalidatePath("/owner");
+  revalidateTag("admin-users", "max");
+  revalidatePath("/owner", "page");
   return { success: true };
 }
 
@@ -91,7 +91,10 @@ export async function deleteUserCompletely(targetUserId: string) {
 
   await prisma.$transaction([deleteConfessions, deleteUser]);
 
-  revalidatePath("/owner");
+  revalidateTag("admin-users", "max");
+  revalidateTag("user-search", "max");
+  revalidateTag("user-profiles", "max");
+  revalidatePath("/owner", "page");
   return { success: true };
 }
 

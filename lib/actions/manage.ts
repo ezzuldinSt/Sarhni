@@ -1,7 +1,7 @@
 "use server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { Prisma } from "@prisma/client";
 
 export async function deleteConfession(confessionId: string) {
@@ -25,8 +25,9 @@ export async function deleteConfession(confessionId: string) {
     where: { id: confessionId },
   });
 
-  // 3. Refresh the dashboard
-  revalidatePath("/dashboard");
+  // 3. Refresh caches
+  revalidateTag("user-profiles", "max");
+  revalidatePath("/dashboard", "page");
   return { success: true };
 }
 
@@ -51,8 +52,9 @@ export async function replyToConfession(confessionId: string, replyContent: stri
     }
   });
 
-  revalidatePath("/dashboard");
-  revalidatePath(`/u/${session.user.name}`); // Update public profile too
+  revalidateTag("user-profiles", "max");
+  revalidatePath("/dashboard", "page");
+  revalidatePath(`/u/${session.user.name}`, "page");
   return { success: true };
 }
 
@@ -89,8 +91,9 @@ export async function togglePin(confessionId: string) {
     data: { isPinned: !confession.isPinned }
   });
 
-  revalidatePath("/dashboard");
-  revalidatePath(`/u/${session.user.name}`);
+  revalidateTag("user-profiles", "max");
+  revalidatePath("/dashboard", "page");
+  revalidatePath(`/u/${session.user.name}`, "page");
   return { success: true, isPinned: !confession.isPinned };
 }
 

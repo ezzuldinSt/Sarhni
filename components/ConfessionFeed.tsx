@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import ConfessionCard from "./ConfessionCard";
 import { fetchConfessions } from "@/lib/actions/manage";
 import { Loader2 } from "lucide-react";
@@ -10,47 +10,60 @@ interface ConfessionFeedProps {
   initialConfessions: ConfessionWithUser[];
   userId: string;
   isOwner: boolean;
+  gridLayout?: boolean;
 }
 
-export default function ConfessionFeed({ initialConfessions, userId, isOwner }: ConfessionFeedProps) {
+export default function ConfessionFeed({ initialConfessions, userId, isOwner, gridLayout = false }: ConfessionFeedProps) {
   const [confessions, setConfessions] = useState<ConfessionWithUser[]>(initialConfessions);
   const [hasMore, setHasMore] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
   const offsetRef = useRef(initialConfessions.length);
+  const existingIdsRef = useRef(new Set(initialConfessions.map(c => c.id)));
 
   const loaderRef = useRef<HTMLDivElement>(null);
 
-  // FIX: Sync state when the server revalidates (e.g., after sending a message)
+  // Sync state when the server revalidates (e.g., after sending a message)
   useEffect(() => {
     setConfessions(initialConfessions);
     offsetRef.current = initialConfessions.length;
+    existingIdsRef.current = new Set(initialConfessions.map(c => c.id));
     setHasMore(true);
   }, [initialConfessions]);
 
+  const loadMore = useCallback(async () => {
+    if (!hasMore || isLoading) return;
+    setIsLoading(true);
+
+    try {
+      const newConfessions = await fetchConfessions(userId, offsetRef.current);
+
+      if (newConfessions.length === 0) {
+        setHasMore(false);
+      } else {
+        const uniqueNew = newConfessions.filter((c: any) => !existingIdsRef.current.has(c.id));
+        uniqueNew.forEach((c: any) => existingIdsRef.current.add(c.id));
+        offsetRef.current += newConfessions.length;
+
+        if (uniqueNew.length > 0) {
+          setConfessions((prev) => [...prev, ...uniqueNew]);
+        }
+      }
+    } catch (error) {
+      console.error("Failed to load more confessions:", error);
+      setHasMore(false);
+    }
+
+    setIsLoading(false);
+  }, [hasMore, isLoading, userId]);
+
   useEffect(() => {
     const observer = new IntersectionObserver(
-      async (entries) => {
-        const target = entries[0];
-        if (target.isIntersecting && hasMore && !isLoading && confessions.length > 0) {
-          setIsLoading(true);
-          
-          const newConfessions = await fetchConfessions(userId, offsetRef.current);
-
-          if (newConfessions.length === 0) {
-            setHasMore(false);
-          } else {
-            offsetRef.current += newConfessions.length;
-            setConfessions((prev) => {
-                const existingIds = new Set(prev.map(c => c.id));
-                const uniqueNew = newConfessions.filter((c: any) => !existingIds.has(c.id));
-                return [...prev, ...uniqueNew];
-            });
-          }
-          
-          setIsLoading(false);
+      (entries) => {
+        if (entries[0].isIntersecting) {
+          loadMore();
         }
       },
-      { threshold: 1.0 }
+      { threshold: 0.5 }
     );
 
     if (loaderRef.current) {
@@ -58,19 +71,25 @@ export default function ConfessionFeed({ initialConfessions, userId, isOwner }: 
     }
 
     return () => observer.disconnect();
-  }, [hasMore, isLoading, userId, confessions]);
+  }, [loadMore]);
+
+  const listClassName = gridLayout
+    ? "grid grid-cols-1 md:grid-cols-2 gap-4"
+    : "space-y-6";
 
   return (
-    <div className="space-y-6">
+    <div>
       {/* 1. The List */}
-      {confessions.map((confession: any, i: number) => (
-        <ConfessionCard 
-          key={confession.id} 
-          confession={confession} 
-          index={i}
-          isOwnerView={isOwner} 
-        />
-      ))}
+      <div className={listClassName}>
+        {confessions.map((confession: any, i: number) => (
+          <ConfessionCard
+            key={confession.id}
+            confession={confession}
+            index={i}
+            isOwnerView={isOwner}
+          />
+        ))}
+      </div>
 
       {/* 2. Empty State */}
       {confessions.length === 0 && (
@@ -82,8 +101,8 @@ export default function ConfessionFeed({ initialConfessions, userId, isOwner }: 
                {isOwner ? "It's quiet... too quiet." : "No confessions yet!"}
              </h3>
              <p className="text-leather-500 max-w-xs mx-auto">
-               {isOwner 
-                 ? "Share your profile link to start receiving mysterious messages." 
+               {isOwner
+                 ? "Share your profile link to start receiving mysterious messages."
                  : "Be the first to break the silence. Send a confession now!"
                }
              </p>

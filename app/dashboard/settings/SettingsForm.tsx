@@ -87,12 +87,12 @@ export default function SettingsForm({ user }: { user: any }) {
       <form action={handleSubmit} className="space-y-6">
         <div className="flex flex-col items-center gap-4 mb-6">
           <div className="relative w-32 h-32 rounded-full border-4 border-leather-pop overflow-hidden shadow-xl">
-            <Image 
-              src={preview} 
-              alt="Avatar Preview" 
-              fill 
+            <Image
+              src={preview}
+              alt="Avatar Preview"
+              fill
+              sizes="128px"
               className="object-cover"
-              unoptimized
             />
           </div>
           

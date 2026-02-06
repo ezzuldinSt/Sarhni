@@ -25,7 +25,23 @@ const config: Config = {
       },
       backgroundImage: {
         'leather-texture': "url('/noise.png')",
-      }
+      },
+      keyframes: {
+        'glitch-1': {
+          '0%, 100%': { transform: 'translate(0, 0)' },
+          '33%': { transform: 'translate(-2px, 1px)' },
+          '66%': { transform: 'translate(2px, -1px)' },
+        },
+        'glitch-2': {
+          '0%, 100%': { transform: 'translate(0, 0)' },
+          '33%': { transform: 'translate(2px, -1px)' },
+          '66%': { transform: 'translate(-2px, 1px)' },
+        },
+      },
+      animation: {
+        'glitch-1': 'glitch-1 0.2s infinite',
+        'glitch-2': 'glitch-2 0.3s infinite',
+      },
     },
   },
   plugins: [],

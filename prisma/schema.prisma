@@ -52,5 +52,6 @@ model Confession {
   @@index([receiverId])
   @@index([senderId])
   @@index([receiverId, isPinned, createdAt])
+  @@index([createdAt])
 }
 
