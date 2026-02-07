@@ -74,7 +74,7 @@ export default function MobileMenu({ session }: { session: any }) {
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
                 onClick={toggleOpen}
-                className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50"
+                className="fixed inset-0 bg-black/80 backdrop-blur-sm z-modal-backdrop"
                 aria-hidden="true"
               />
 
@@ -94,7 +94,7 @@ export default function MobileMenu({ session }: { session: any }) {
                 role="dialog"
                 aria-modal="true"
                 aria-label="Mobile navigation menu"
-                className="fixed top-0 right-0 bottom-0 w-[75%] max-w-sm z-[60] shadow-2xl flex flex-col p-6 border-l border-leather-600 touch-pan-x bg-leather-800"
+                className="fixed top-0 right-0 bottom-0 w-[75%] max-w-sm z-modal shadow-2xl flex flex-col p-6 border-l border-leather-600 touch-pan-x bg-leather-800"
               >
                 {/* Header */}
                 <div className="flex justify-between items-center mb-8">

@@ -38,10 +38,10 @@ export default async function Navbar() {
                 await signOut({ redirectTo: "/" });
               }}>
                 {/* FIX: Removed size="sm", added h-8 px-3 text-xs manually */}
-                <Button 
-                  variant="secondary" 
+                <Button
+                  variant="secondary"
                   size="sm"
-                  className="ml-2 bg-transparent border border-red-900/30 text-red-400 hover:bg-red-900/20 hover:text-red-300 shadow-none"
+                  className="ml-2 bg-transparent border border-danger/30 text-danger hover:bg-danger-bg hover:text-danger-light shadow-none"
                 >
                   Sign Out
                 </Button>

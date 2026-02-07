@@ -78,7 +78,7 @@ export default function ConfessionForm({ receiverId, usernamePath, user }: { rec
             exit={{ opacity: 0, scale: 0.9 }}
             className="flex flex-col items-center justify-center py-12 text-center space-y-4"
           >
-            <div className="w-16 h-16 bg-green-500/20 text-green-400 rounded-full flex items-center justify-center mb-2">
+            <div className="w-16 h-16 bg-success-bg text-success rounded-full flex items-center justify-center mb-2">
               <Send size={32} />
             </div>
             <h3 className="text-2xl font-bold text-white">Message Sent!</h3>

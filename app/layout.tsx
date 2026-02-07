@@ -35,23 +35,19 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${varela.className} ${varela.variable} bg-leather-900 text-leather-accent min-h-screen relative`}>
-        <div className="fixed inset-0 pointer-events-none opacity-[0.03] bg-leather-texture z-[5] bg-repeat" />
+        <div className="fixed inset-0 pointer-events-none opacity-[0.03] bg-leather-texture z-base bg-repeat" />
         <Navbar />
         <main className="container mx-auto px-4 py-8">
           {children}
         </main>
         {/* ADD THE TOASTER COMPONENT HERE */}
-        <Toaster 
+        <Toaster
           position="bottom-center"
+          expand
+          richColors
+          closeButton
           toastOptions={{
-            style: {
-              background: '#3E2723', // leather-800
-              color: '#D7CCC8', // leather-accent
-              border: '2px solid #5D4037', // leather-600
-              borderRadius: '16px',
-              fontFamily: 'var(--font-varela)',
-            },
-            className: 'shadow-xl'
+            unstyled: false,
           }}
         />
       </body>

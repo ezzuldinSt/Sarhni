@@ -3,50 +3,80 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
+import { ConfirmDialogProvider, useConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { toggleBan, updateUserRole, deleteUserCompletely } from "@/lib/actions/admin";
-import { toast } from "sonner";
+import { toastSuccess, toastError } from "@/lib/toast";
 import { Shield, ShieldAlert, Ban, Trash2, CheckCircle } from "lucide-react";
 
-export default function AdminDashboard({ users, viewerRole }: { users: any[], viewerRole: string }) {
+function AdminDashboardContent({ users, viewerRole }: { users: any[], viewerRole: string }) {
   const [userList, setUserList] = useState(users);
+  const { confirm } = useConfirmDialog();
 
-  const handleBan = async (id: string) => {
+  const handleBan = async (id: string, username: string, isCurrentlyBanned: boolean) => {
+    const confirmed = await confirm({
+      title: isCurrentlyBanned ? "Unban User" : "Ban User",
+      message: `Are you sure you want to ${isCurrentlyBanned ? "unban" : "ban"} @${username}?`,
+      confirmText: isCurrentlyBanned ? "Unban" : "Ban",
+      cancelText: "Cancel",
+      variant: "warning"
+    });
+
+    if (!confirmed) return;
+
     const res = await toggleBan(id);
-    if (res?.error) return toast.error(res.error);
-    
+    if (res?.error) return toastError(res.error);
+
     // Optimistic Update
     setUserList(prev => prev.map(u => u.id === id ? { ...u, isBanned: !u.isBanned } : u));
-    toast.success("User status updated");
+    toastSuccess("User status updated");
   };
 
-  const handlePromote = async (id: string, currentRole: string) => {
+  const handlePromote = async (id: string, currentRole: string, username: string) => {
     const newRole = currentRole === "ADMIN" ? "USER" : "ADMIN";
+    const confirmed = await confirm({
+      title: `${newRole === "ADMIN" ? "Promote" : "Demote"} User`,
+      message: `Are you sure you want to ${newRole === "ADMIN" ? "promote" : "demote"} @${username} to ${newRole}?`,
+      confirmText: newRole === "ADMIN" ? "Promote" : "Demote",
+      cancelText: "Cancel",
+      variant: "info"
+    });
+
+    if (!confirmed) return;
+
     const res = await updateUserRole(id, newRole);
-    if (res?.error) return toast.error(res.error);
-    
+    if (res?.error) return toastError(res.error);
+
     setUserList(prev => prev.map(u => u.id === id ? { ...u, role: newRole } : u));
-    toast.success(`User is now ${newRole}`);
+    toastSuccess(`User is now ${newRole}`);
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm("NUCLEAR WARNING: This will erase the user and ALL their data forever. Proceed?")) return;
-    
+  const handleDelete = async (id: string, username: string) => {
+    const confirmed = await confirm({
+      title: "Delete User",
+      message: `NUCLEAR WARNING: This will erase @${username} and ALL their data forever. This action cannot be undone.`,
+      confirmText: "Delete Forever",
+      cancelText: "Cancel",
+      variant: "danger"
+    });
+
+    if (!confirmed) return;
+
     const res = await deleteUserCompletely(id);
-    if (res?.error) return toast.error(res.error);
-    
+    if (res?.error) return toastError(res.error);
+
     setUserList(prev => prev.filter(u => u.id !== id));
-    toast.success("User erased from existence.");
+    toastSuccess("User erased from existence.");
   };
 
   return (
     <div className="space-y-4">
       {userList.map((user) => (
         <Card key={user.id} className="flex flex-col md:flex-row items-center justify-between p-4 gap-4 bg-leather-800/50">
-          
+
           <div className="flex items-center gap-4">
             <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold ${
-                user.role === 'OWNER' ? 'bg-yellow-500 text-black' : 
-                user.role === 'ADMIN' ? 'bg-red-500 text-white' : 'bg-leather-600'
+                user.role === 'OWNER' ? 'bg-warning text-leather-900' :
+                user.role === 'ADMIN' ? 'bg-danger text-white' : 'bg-leather-600'
             }`}>
               {user.role === 'OWNER' ? '👑' : user.username[0].toUpperCase()}
             </div>
@@ -62,10 +92,11 @@ export default function AdminDashboard({ users, viewerRole }: { users: any[], vi
           <div className="flex items-center gap-2">
             {/* ADMIN ACTIONS */}
             {user.role !== "OWNER" && (
-                <Button 
-                    onClick={() => handleBan(user.id)}
+                <Button
+                    onClick={() => handleBan(user.id, user.username, user.isBanned)}
                     size="sm"
-                    className={`${user.isBanned ? 'bg-green-600 hover:bg-green-500' : 'bg-orange-600 hover:bg-orange-500'}`}
+                    className={`${user.isBanned ? 'bg-success hover:bg-success/80' : 'bg-warning hover:bg-warning/90'}`}
+                    aria-label={user.isBanned ? "Unban User" : "Ban User"}
                 >
                     {user.isBanned ? <CheckCircle size={14} /> : <Ban size={14} />}
                 </Button>
@@ -74,20 +105,20 @@ export default function AdminDashboard({ users, viewerRole }: { users: any[], vi
             {/* OWNER ONLY ACTIONS */}
             {viewerRole === "OWNER" && user.role !== "OWNER" && (
                 <>
-                    <Button 
-                        onClick={() => handlePromote(user.id, user.role)}
+                    <Button
+                        onClick={() => handlePromote(user.id, user.role, user.username)}
                         size="sm"
-                        className="bg-blue-600 hover:bg-blue-500"
-                        title={user.role === "ADMIN" ? "Demote to User" : "Promote to Admin"}
+                        className="bg-info hover:bg-info/90"
+                        aria-label={user.role === "ADMIN" ? "Demote to User" : "Promote to Admin"}
                     >
                         <Shield size={14} />
                     </Button>
-                    
-                    <Button 
-                        onClick={() => handleDelete(user.id)}
+
+                    <Button
+                        onClick={() => handleDelete(user.id, user.username)}
                         size="sm"
-                        className="bg-red-700 hover:bg-red-600"
-                        title="Delete User"
+                        className="bg-danger hover:bg-danger-hover"
+                        aria-label="Delete User"
                     >
                         <Trash2 size={14} />
                     </Button>
@@ -98,6 +129,15 @@ export default function AdminDashboard({ users, viewerRole }: { users: any[], vi
         </Card>
       ))}
     </div>
+  );
+}
+
+// Wrapper component that provides the ConfirmDialog context
+export default function AdminDashboard({ users, viewerRole }: { users: any[], viewerRole: string }) {
+  return (
+    <ConfirmDialogProvider>
+      <AdminDashboardContent users={users} viewerRole={viewerRole} />
+    </ConfirmDialogProvider>
   );
 }
 

@@ -139,15 +139,15 @@ export function ConfirmDialog({
     switch (variant) {
       case "danger":
         return {
-          icon: "text-red-400",
-          iconBg: "bg-red-500/20",
-          button: "bg-red-500 hover:bg-red-600 text-white"
+          icon: "text-danger",
+          iconBg: "bg-danger-bg",
+          button: "bg-danger hover:bg-danger-hover text-white"
         };
       case "warning":
         return {
-          icon: "text-yellow-400",
-          iconBg: "bg-yellow-500/20",
-          button: "bg-yellow-500 hover:bg-yellow-600 text-leather-900"
+          icon: "text-warning",
+          iconBg: "bg-warning-bg",
+          button: "bg-warning hover:bg-warning/90 text-leather-900"
         };
       case "info":
         return {
@@ -175,12 +175,12 @@ export function ConfirmDialog({
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={onClose}
-            className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50"
+            className="fixed inset-0 bg-black/80 backdrop-blur-sm z-modal-backdrop"
             aria-hidden="true"
           />
 
           {/* Dialog */}
-          <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+          <div className="fixed inset-0 z-modal flex items-center justify-center p-4">
             <motion.div
               ref={dialogRef}
               role="dialog"

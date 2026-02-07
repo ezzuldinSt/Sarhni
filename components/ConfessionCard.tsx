@@ -57,7 +57,7 @@ function ConfessionCardInner({ confession, index, isOwnerView = false, isSentVie
     try {
       const { default: html2canvas } = await import("html2canvas");
       const canvas = await html2canvas(stickerRef.current, {
-        backgroundColor: "#2C1A1D", // Match theme background
+        backgroundColor: "#2C1A1D", // Match leather-900 theme background
         scale: 2, // High resolution
         logging: false,
         useCORS: true
@@ -125,7 +125,7 @@ function ConfessionCardInner({ confession, index, isOwnerView = false, isSentVie
 
         {/* --- Visual Pin Indicator (Always Visible if Pinned) --- */}
         {isPinned && (
-          <div className="absolute -top-2 -left-2 bg-leather-pop text-leather-900 p-1.5 rounded-full shadow-lg z-20 rotate-[-15deg] border-2 border-leather-900">
+          <div className="absolute -top-2 -left-2 bg-leather-pop text-leather-900 p-1.5 rounded-full shadow-lg z-sticky rotate-[-15deg] border-2 border-leather-900">
             <Pin size={12} fill="currentColor" />
           </div>
         )}
@@ -139,7 +139,7 @@ function ConfessionCardInner({ confession, index, isOwnerView = false, isSentVie
 
         {/* --- Header Controls (Owner View or Sender View) --- */}
         {(isOwnerView || isSentView) && (
-           <div className="absolute top-4 right-4 flex gap-2 opacity-100 md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100 transition-all z-10">
+           <div className="absolute top-4 right-4 flex gap-2 opacity-100 md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100 transition-all z-dropdown">
 
              {/* Pin Button (Owner only) */}
              {isOwnerView && (
@@ -162,7 +162,7 @@ function ConfessionCardInner({ confession, index, isOwnerView = false, isSentVie
                <button
                  onClick={() => setIsEditing(true)}
                  aria-label="Edit message"
-                 className="p-2 min-h-[44px] min-w-[44px] bg-leather-800 text-blue-400 rounded-full hover:bg-blue-500 hover:text-white shadow-lg transition-colors"
+                 className="p-2 min-h-touch min-w-touch bg-leather-800 text-info rounded-full hover:bg-info hover:text-white shadow-lg transition-colors"
                  title="Edit message (5 min window)"
                >
                   <Edit3 className="w-4 h-4" />
@@ -174,7 +174,7 @@ function ConfessionCardInner({ confession, index, isOwnerView = false, isSentVie
                onClick={() => handleDelete(confession.id)}
                disabled={isDeleting || isGenerating}
                aria-label="Delete message"
-               className="p-2 min-h-[44px] min-w-[44px] bg-leather-800 text-red-400 rounded-full hover:bg-red-500 hover:text-white shadow-lg disabled:opacity-50 transition-colors"
+               className="p-2 min-h-touch min-w-touch bg-leather-800 text-danger rounded-full hover:bg-danger hover:text-white shadow-lg disabled:opacity-50 transition-colors"
                title="Delete Message"
              >
                 {isDeleting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
@@ -185,7 +185,7 @@ function ConfessionCardInner({ confession, index, isOwnerView = false, isSentVie
                onClick={handleShare}
                disabled={isGenerating || isDeleting}
                aria-label="Generate shareable sticker"
-               className="p-2 min-h-[44px] min-w-[44px] bg-leather-800 text-leather-pop rounded-full hover:bg-leather-pop hover:text-leather-900 shadow-lg disabled:opacity-50 transition-colors"
+               className="p-2 min-h-touch min-w-touch bg-leather-800 text-leather-pop rounded-full hover:bg-leather-pop hover:text-leather-900 shadow-lg disabled:opacity-50 transition-colors"
                title="Generate Story Sticker"
              >
                {isGenerating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Share2 className="w-4 h-4" />}
@@ -198,7 +198,7 @@ function ConfessionCardInner({ confession, index, isOwnerView = false, isSentVie
           <button
             onClick={handleReport}
             aria-label="Report this message"
-            className="absolute top-4 right-4 p-2 min-h-[44px] min-w-[44px] bg-leather-800/80 text-red-400 rounded-full hover:bg-red-500 hover:text-white shadow-lg opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100 transition-opacity z-10"
+            className="absolute top-4 right-4 p-2 min-h-touch min-w-touch bg-leather-800/80 text-danger rounded-full hover:bg-danger hover:text-white shadow-lg opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100 transition-opacity z-dropdown"
             title="Report inappropriate content"
           >
             <Flag className="w-4 h-4" />
@@ -213,7 +213,7 @@ function ConfessionCardInner({ confession, index, isOwnerView = false, isSentVie
                  autoFocus
                  value={editText}
                  onChange={(e) => setEditText(e.target.value)}
-                 className="w-full bg-leather-900/80 rounded-lg px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-leather-pop text-leather-accent placeholder-leather-600 min-h-[80px]"
+                 className="w-full bg-leather-900/80 rounded-lg px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-leather-pop text-leather-accent placeholder-leather-600 min-h-20"
                  placeholder="Edit your message..."
                  maxLength={500}
                />
@@ -224,6 +224,7 @@ function ConfessionCardInner({ confession, index, isOwnerView = false, isSentVie
                      type="button"
                      onClick={handleCancelEdit}
                      className="flex items-center gap-1 px-3 py-1 rounded-lg hover:bg-leather-800 text-leather-500"
+                     aria-label="Cancel edit"
                    >
                      <X size={14} />
                      Cancel
@@ -231,7 +232,8 @@ function ConfessionCardInner({ confession, index, isOwnerView = false, isSentVie
                    <button
                      type="submit"
                      disabled={!editText.trim()}
-                     className="flex items-center gap-1 px-3 py-1 rounded-lg bg-blue-500 text-white hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                     className="flex items-center gap-1 px-3 py-1 rounded-lg bg-info text-white hover:bg-info/90 disabled:opacity-50 disabled:cursor-not-allowed"
+                     aria-label="Save edit"
                    >
                      <Check size={14} />
                      Save

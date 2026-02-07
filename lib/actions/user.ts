@@ -52,35 +52,46 @@ export async function deleteProfileImage() {
     select: { image: true }
   });
 
-  // 2. Check if there is an image to delete
-  if (user?.image) {
-    try {
-      // FIX: Robustly extract "file.jpg" regardless of the URL prefix
-      // (works for /api/uploads/file.jpg AND /uploads/file.jpg)
-      const filename = user.image.split('/').pop();
+  if (!user?.image) {
+    return { error: "No profile image to delete" };
+  }
 
-      if (filename) {
-          // Construct the physical path on the disk
-          const filePath = path.join(process.cwd(), "public", "uploads", filename);
+  // 2. Extract filename robustly (handles /api/uploads/file.jpg and /uploads/file.jpg)
+  const filename = user.image.split('/').pop()?.split('?')[0];
 
-          // Delete it
-          await fs.unlink(filePath);
-      }
-    } catch (error) {
-      // If file is already gone, just log a warning and continue to clear the DB
-      console.warn("Could not delete file from disk:", error);
+  if (!filename) {
+    // Invalid URL format, clear database anyway
+    await prisma.user.update({
+      where: { id: session.user.id },
+      data: { image: null }
+    });
+    return { success: true, message: "Database cleared (invalid URL format)" };
+  }
+
+  // 3. Delete file from filesystem
+  try {
+    const filePath = path.join(process.cwd(), "public", "uploads", filename);
+    await fs.unlink(filePath);
+  } catch (error) {
+    // Log but don't fail - file might not exist
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
+      // Only log if it's not a "file not found" error
+      console.error(`Failed to delete profile image file: ${errorMessage}`);
     }
   }
 
-  // 3. Clear the database field
+  // 4. Clear database field
   await prisma.user.update({
     where: { id: session.user.id },
-    data: { image: null },
+    data: { image: null }
   });
 
+  // 5. Revalidate caches
   revalidateTag("user-profiles", "max");
   revalidatePath("/dashboard/settings", "page");
   revalidatePath(`/u/${session.user.name}`, "page");
+
   return { success: true };
 }
 
