@@ -2,19 +2,22 @@
 
 import { memo, useRef, useState } from "react";
 import { Card } from "./ui/Card";
-import { Share2, Loader2, Trash2, MessageCircle, Pin } from "lucide-react";
-import { toast } from "sonner";
+import { Share2, Loader2, Trash2, MessageCircle, Pin, Edit3, X, Check, Flag } from "lucide-react";
+import { toastSuccess, toastError, toastLoading } from "@/lib/toast";
 import { ConfessionSticker } from "./ConfessionSticker";
 import { useConfessionActions } from "@/hooks/useConfessionActions";
 import { ConfessionWithUser } from "@/lib/types";
+import { useReportDialog } from "./ReportDialog";
 
 interface ConfessionCardProps {
   confession: ConfessionWithUser;
   index: number;
   isOwnerView?: boolean;
+  isSentView?: boolean;
+  currentUserId?: string;
 }
 
-function ConfessionCardInner({ confession, index, isOwnerView = false }: ConfessionCardProps) {
+function ConfessionCardInner({ confession, index, isOwnerView = false, isSentView = false, currentUserId }: ConfessionCardProps) {
   const date = new Date(confession.createdAt).toLocaleDateString();
   const stickerRef = useRef<HTMLDivElement>(null);
 
@@ -22,6 +25,17 @@ function ConfessionCardInner({ confession, index, isOwnerView = false }: Confess
   const [isGenerating, setIsGenerating] = useState(false); // Sharing
   const [isReplying, setIsReplying] = useState(false);     // Toggling Reply Form
   const [replyText, setReplyText] = useState("");          // Reply Input
+  const [isEditing, setIsEditing] = useState(false);       // Editing state
+  const [editText, setEditText] = useState(confession.content); // Edit Input
+
+  // -- Report Dialog --
+  const { ReportDialog, isOpen: isReportOpen, open: openReport, close: closeReport } = useReportDialog();
+
+  // -- Check if message can be edited (within 5 minutes and is sender's message) --
+  const canEdit = currentUserId && confession.senderId === currentUserId;
+  const timeSinceCreation = Date.now() - new Date(confession.createdAt).getTime();
+  const fiveMinutes = 5 * 60 * 1000;
+  const isWithinEditWindow = timeSinceCreation < fiveMinutes;
 
   // -- Business Logic Hook --
   const {
@@ -38,7 +52,7 @@ function ConfessionCardInner({ confession, index, isOwnerView = false }: Confess
     if (!stickerRef.current || isGenerating) return;
 
     setIsGenerating(true);
-    const loading = toast.loading("Generating sticker...", { id: "sticker-toast" });
+    const loading = toastLoading("Generating sticker...", { id: "sticker-toast" });
 
     try {
       const { default: html2canvas } = await import("html2canvas");
@@ -59,12 +73,11 @@ function ConfessionCardInner({ confession, index, isOwnerView = false }: Confess
         link.click();
         URL.revokeObjectURL(url);
 
-        toast.success("Sticker saved!", { id: "sticker-toast" });
+        toastSuccess("Sticker saved!", { id: "sticker-toast" });
       }, 'image/jpeg', 0.9);
 
     } catch (error) {
-      console.error(error);
-      toast.error("Failed to generate image.", { id: "sticker-toast" });
+      toastError("Failed to generate image.", { id: "sticker-toast" });
     } finally {
       setIsGenerating(false);
     }
@@ -76,11 +89,36 @@ function ConfessionCardInner({ confession, index, isOwnerView = false }: Confess
     handleReply(confession.id, replyText, () => setIsReplying(false));
   };
 
+  // --- 3. Edit Handler ---
+  const handleEditSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editText.trim()) return;
+
+    const { editConfession } = await import("@/lib/actions/manage");
+    const result = await editConfession(confession.id, editText);
+
+    if (result?.error) {
+      toastError(result.error);
+    } else {
+      toastSuccess("Message edited!");
+      setIsEditing(false);
+    }
+  };
+
+  const handleCancelEdit = () => {
+    setEditText(confession.content);
+    setIsEditing(false);
+  };
+
+  const handleReport = () => {
+    openReport(confession.id);
+  };
+
   return (
     <>
     {/* Main Card Display */}
     <div
-      className={`h-full animate-in fade-in slide-in-from-bottom-4 transition-opacity duration-300 ${isDeleting ? "opacity-0 pointer-events-none" : ""}`}
+      className={`h-full animate-in fade-in slide-in-from-bottom-4 transition-opacity duration-300 motion-reduce:animate-none motion-reduce:transition-none ${isDeleting ? "opacity-0 pointer-events-none" : ""}`}
       style={{ animationDelay: `${index * 100}ms`, animationDuration: "400ms", animationFillMode: "both" }}
     >
       <Card className="h-full flex flex-col bg-leather-700/50 border-leather-600 hover:border-leather-pop/50 transition-colors relative group">
@@ -92,30 +130,51 @@ function ConfessionCardInner({ confession, index, isOwnerView = false }: Confess
           </div>
         )}
 
-        {/* --- Header Controls (Owner View Only) --- */}
-        {isOwnerView && (
-           <div className="absolute top-4 right-4 flex gap-2 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-all z-10">
+        {/* --- Edited Indicator --- */}
+        {confession.editedAt && !isEditing && (
+          <div className="absolute top-4 left-4">
+            <span className="text-xs text-leather-600 italic">(edited)</span>
+          </div>
+        )}
 
-             {/* Pin Button */}
-             <button
-               onClick={() => handlePin(confession.id)}
-               aria-label={isPinned ? "Unpin message" : "Pin message"}
-               className={`p-2 rounded-full shadow-lg transition-colors ${
-                 isPinned
-                   ? "bg-leather-pop text-leather-900 hover:bg-leather-popHover"
-                   : "bg-leather-800 text-leather-500 hover:text-leather-pop"
-               }`}
-               title={isPinned ? "Unpin" : "Pin to Top"}
-             >
-                <Pin className="w-4 h-4" fill={isPinned ? "currentColor" : "none"} />
-             </button>
+        {/* --- Header Controls (Owner View or Sender View) --- */}
+        {(isOwnerView || isSentView) && (
+           <div className="absolute top-4 right-4 flex gap-2 opacity-100 md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100 transition-all z-10">
+
+             {/* Pin Button (Owner only) */}
+             {isOwnerView && (
+               <button
+                 onClick={() => handlePin(confession.id)}
+                 aria-label={isPinned ? "Unpin message" : "Pin message"}
+                 className={`p-2 min-h-[44px] min-w-[44px] rounded-full shadow-lg transition-colors ${
+                   isPinned
+                     ? "bg-leather-pop text-leather-900 hover:bg-leather-popHover"
+                     : "bg-leather-800 text-leather-500 hover:text-leather-pop"
+                 }`}
+                 title={isPinned ? "Unpin" : "Pin to Top"}
+               >
+                  <Pin className="w-4 h-4" fill={isPinned ? "currentColor" : "none"} />
+               </button>
+             )}
+
+             {/* Edit Button (Sender only, within 5 min) */}
+             {isSentView && canEdit && isWithinEditWindow && !isEditing && (
+               <button
+                 onClick={() => setIsEditing(true)}
+                 aria-label="Edit message"
+                 className="p-2 min-h-[44px] min-w-[44px] bg-leather-800 text-blue-400 rounded-full hover:bg-blue-500 hover:text-white shadow-lg transition-colors"
+                 title="Edit message (5 min window)"
+               >
+                  <Edit3 className="w-4 h-4" />
+               </button>
+             )}
 
              {/* Delete Button */}
              <button
                onClick={() => handleDelete(confession.id)}
                disabled={isDeleting || isGenerating}
                aria-label="Delete message"
-               className="p-2 bg-leather-800 text-red-400 rounded-full hover:bg-red-500 hover:text-white shadow-lg disabled:opacity-50 transition-colors"
+               className="p-2 min-h-[44px] min-w-[44px] bg-leather-800 text-red-400 rounded-full hover:bg-red-500 hover:text-white shadow-lg disabled:opacity-50 transition-colors"
                title="Delete Message"
              >
                 {isDeleting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
@@ -126,7 +185,7 @@ function ConfessionCardInner({ confession, index, isOwnerView = false }: Confess
                onClick={handleShare}
                disabled={isGenerating || isDeleting}
                aria-label="Generate shareable sticker"
-               className="p-2 bg-leather-800 text-leather-pop rounded-full hover:bg-leather-pop hover:text-leather-900 shadow-lg disabled:opacity-50 transition-colors"
+               className="p-2 min-h-[44px] min-w-[44px] bg-leather-800 text-leather-pop rounded-full hover:bg-leather-pop hover:text-leather-900 shadow-lg disabled:opacity-50 transition-colors"
                title="Generate Story Sticker"
              >
                {isGenerating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Share2 className="w-4 h-4" />}
@@ -134,9 +193,55 @@ function ConfessionCardInner({ confession, index, isOwnerView = false }: Confess
            </div>
         )}
 
+        {/* --- Report Button (Always visible for logged-in users) --- */}
+        {currentUserId && !(isOwnerView || isSentView) && (
+          <button
+            onClick={handleReport}
+            aria-label="Report this message"
+            className="absolute top-4 right-4 p-2 min-h-[44px] min-w-[44px] bg-leather-800/80 text-red-400 rounded-full hover:bg-red-500 hover:text-white shadow-lg opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100 transition-opacity z-10"
+            title="Report inappropriate content"
+          >
+            <Flag className="w-4 h-4" />
+          </button>
+        )}
+
         {/* --- Message Body --- */}
         <div className="p-2 mb-2 pr-4">
-           <p className="text-lg whitespace-pre-wrap leading-relaxed">"{confession.content}"</p>
+           {isEditing ? (
+             <form onSubmit={handleEditSubmit} className="space-y-3">
+               <textarea
+                 autoFocus
+                 value={editText}
+                 onChange={(e) => setEditText(e.target.value)}
+                 className="w-full bg-leather-900/80 rounded-lg px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-leather-pop text-leather-accent placeholder-leather-600 min-h-[80px]"
+                 placeholder="Edit your message..."
+                 maxLength={500}
+               />
+               <div className="flex items-center justify-between text-xs text-leather-600">
+                 <span>{editText.length}/500</span>
+                 <div className="flex gap-2">
+                   <button
+                     type="button"
+                     onClick={handleCancelEdit}
+                     className="flex items-center gap-1 px-3 py-1 rounded-lg hover:bg-leather-800 text-leather-500"
+                   >
+                     <X size={14} />
+                     Cancel
+                   </button>
+                   <button
+                     type="submit"
+                     disabled={!editText.trim()}
+                     className="flex items-center gap-1 px-3 py-1 rounded-lg bg-blue-500 text-white hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                   >
+                     <Check size={14} />
+                     Save
+                   </button>
+                 </div>
+               </div>
+             </form>
+           ) : (
+             <p className="text-lg whitespace-pre-wrap leading-relaxed">"{confession.content}"</p>
+           )}
         </div>
 
         {/* --- Reply Section (Display) --- */}
@@ -155,7 +260,7 @@ function ConfessionCardInner({ confession, index, isOwnerView = false }: Confess
         )}
 
         {/* --- Reply Form (Owner Input) --- */}
-        {isOwnerView && !optimisticReply && (
+        {isOwnerView && !optimisticReply && !isEditing && (
           <div className="mt-auto pt-4 border-t border-leather-600/30">
             {!isReplying ? (
               <button
@@ -218,6 +323,9 @@ function ConfessionCardInner({ confession, index, isOwnerView = false }: Confess
           </div>
         </div>
     )}
+
+    {/* Report Dialog */}
+    <ReportDialog />
     </>
   );
 }
@@ -228,8 +336,10 @@ const ConfessionCard = memo(ConfessionCardInner, (prev, next) => {
     prev.confession.isPinned === next.confession.isPinned &&
     prev.confession.reply === next.confession.reply &&
     prev.confession.content === next.confession.content &&
+    prev.confession.editedAt === next.confession.editedAt &&
     prev.index === next.index &&
-    prev.isOwnerView === next.isOwnerView
+    prev.isOwnerView === next.isOwnerView &&
+    prev.isSentView === next.isSentView
   );
 });
 

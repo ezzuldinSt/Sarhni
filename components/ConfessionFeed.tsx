@@ -5,18 +5,22 @@ import ConfessionCard from "./ConfessionCard";
 import { fetchConfessions } from "@/lib/actions/manage";
 import { Loader2 } from "lucide-react";
 import { ConfessionWithUser } from "@/lib/types";
+import { EmptyInbox } from "./ui/EmptyState";
 
 interface ConfessionFeedProps {
   initialConfessions: ConfessionWithUser[];
   userId: string;
   isOwner: boolean;
   gridLayout?: boolean;
+  username?: string;
+  currentUserId?: string;
 }
 
-export default function ConfessionFeed({ initialConfessions, userId, isOwner, gridLayout = false }: ConfessionFeedProps) {
+export default function ConfessionFeed({ initialConfessions, userId, isOwner, gridLayout = false, username, currentUserId }: ConfessionFeedProps) {
   const [confessions, setConfessions] = useState<ConfessionWithUser[]>(initialConfessions);
   const [hasMore, setHasMore] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const offsetRef = useRef(initialConfessions.length);
   const existingIdsRef = useRef(new Set(initialConfessions.map(c => c.id)));
 
@@ -33,6 +37,7 @@ export default function ConfessionFeed({ initialConfessions, userId, isOwner, gr
   const loadMore = useCallback(async () => {
     if (!hasMore || isLoading) return;
     setIsLoading(true);
+    setError(null);
 
     try {
       const newConfessions = await fetchConfessions(userId, offsetRef.current);
@@ -48,8 +53,8 @@ export default function ConfessionFeed({ initialConfessions, userId, isOwner, gr
           setConfessions((prev) => [...prev, ...uniqueNew]);
         }
       }
-    } catch (error) {
-      console.error("Failed to load more confessions:", error);
+    } catch (err) {
+      setError("Failed to load more messages. Please try again.");
       setHasMore(false);
     }
 
@@ -73,44 +78,62 @@ export default function ConfessionFeed({ initialConfessions, userId, isOwner, gr
     return () => observer.disconnect();
   }, [loadMore]);
 
+  const handleShareProfile = () => {
+    if (typeof window !== "undefined" && username) {
+      const url = `${window.location.origin}/u/${username}`;
+      navigator.clipboard.writeText(url);
+      // You could add a toast notification here
+    }
+  };
+
   const listClassName = gridLayout
     ? "grid grid-cols-1 md:grid-cols-2 gap-4"
     : "space-y-6";
 
+  // Determine if this is a sent view (based on URL or prop)
+  const isSentView = typeof window !== "undefined" && window.location.pathname === "/dashboard/sent";
+
   return (
-    <div>
+    <section aria-label="Confessions feed">
       {/* 1. The List */}
       <div className={listClassName}>
         {confessions.map((confession: any, i: number) => (
-          <ConfessionCard
-            key={confession.id}
-            confession={confession}
-            index={i}
-            isOwnerView={isOwner}
-          />
+          <article key={confession.id}>
+            <ConfessionCard
+              confession={confession}
+              index={i}
+              isOwnerView={isOwner}
+              isSentView={isSentView}
+              currentUserId={currentUserId}
+            />
+          </article>
         ))}
       </div>
 
       {/* 2. Empty State */}
       {confessions.length === 0 && (
-          <div className="flex flex-col items-center justify-center py-16 px-4 text-center border-2 border-dashed border-leather-600/30 rounded-3xl bg-leather-800/10">
-             <div className="w-16 h-16 bg-leather-800 rounded-full flex items-center justify-center mb-4 text-3xl">
-               👻
-             </div>
-             <h3 className="text-xl font-bold text-leather-accent mb-2">
-               {isOwner ? "It's quiet... too quiet." : "No confessions yet!"}
-             </h3>
-             <p className="text-leather-500 max-w-xs mx-auto">
-               {isOwner
-                 ? "Share your profile link to start receiving mysterious messages."
-                 : "Be the first to break the silence. Send a confession now!"
-               }
-             </p>
-          </div>
+        <EmptyInbox isOwner={isOwner} onShare={handleShareProfile} />
       )}
 
-      {/* 3. Loading Indicator */}
-      {hasMore && confessions.length > 0 && (
+      {/* 3. Error State */}
+      {error && (
+        <div className="py-8 text-center">
+          <p className="text-red-400 mb-4">{error}</p>
+          <button
+            onClick={() => {
+              setError(null);
+              setHasMore(true);
+              loadMore();
+            }}
+            className="px-4 py-2 bg-leather-700 hover:bg-leather-600 text-leather-accent rounded-lg transition-colors"
+          >
+            Retry
+          </button>
+        </div>
+      )}
+
+      {/* 4. Loading Indicator */}
+      {hasMore && confessions.length > 0 && !error && (
         <div ref={loaderRef} className="py-8 flex justify-center w-full">
            {isLoading ? (
              <Loader2 className="animate-spin text-leather-pop" />
@@ -120,12 +143,12 @@ export default function ConfessionFeed({ initialConfessions, userId, isOwner, gr
         </div>
       )}
 
-      {/* 4. End of List */}
-      {!hasMore && confessions.length > 0 && (
+      {/* 5. End of List */}
+      {!hasMore && confessions.length > 0 && !error && (
         <p className="text-center text-xs text-leather-500 py-4 uppercase tracking-widest">
           You have reached the end of the void
         </p>
       )}
-    </div>
+    </section>
   );
 }

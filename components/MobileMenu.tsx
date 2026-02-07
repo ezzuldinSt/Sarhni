@@ -5,7 +5,7 @@ import { createPortal } from "react-dom";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion, AnimatePresence, PanInfo } from "framer-motion";
-import { Menu, X, Home, User, Settings, LogOut, LayoutDashboard } from "lucide-react";
+import { Menu, X, Home, User, Settings, LogOut, LayoutDashboard, Shield, Flag, Crown } from "lucide-react";
 import { signOut } from "next-auth/react";
 import UserSearch from "./UserSearch";
 
@@ -53,10 +53,12 @@ export default function MobileMenu({ session }: { session: any }) {
   return (
     <div className="md:hidden">
       {/* HAMBURGER BUTTON */}
-      <button 
-        onClick={toggleOpen} 
+      <button
+        onClick={toggleOpen}
         className="p-2 text-leather-accent hover:text-leather-pop transition-colors"
         aria-label="Toggle Menu"
+        aria-expanded={isOpen}
+        aria-controls="mobile-menu"
       >
         <Menu size={28} />
       </button>
@@ -72,7 +74,7 @@ export default function MobileMenu({ session }: { session: any }) {
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
                 onClick={toggleOpen}
-                className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[9998]"
+                className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50"
                 aria-hidden="true"
               />
 
@@ -88,10 +90,11 @@ export default function MobileMenu({ session }: { session: any }) {
                 dragElastic={{ left: 0, right: 0.5 }} // Rubber band effect on right pull
                 onDragEnd={handleDragEnd} // Detect swipe finish
                 // ----------------------
+                id="mobile-menu"
                 role="dialog"
                 aria-modal="true"
-                style={{ backgroundColor: "#2C1A1D" }}
-                className="fixed top-0 right-0 bottom-0 w-[80%] max-w-sm z-[9999] shadow-2xl flex flex-col p-6 border-l border-leather-600 touch-pan-x"
+                aria-label="Mobile navigation menu"
+                className="fixed top-0 right-0 bottom-0 w-[75%] max-w-sm z-[60] shadow-2xl flex flex-col p-6 border-l border-leather-600 touch-pan-x bg-leather-800"
               >
                 {/* Header */}
                 <div className="flex justify-between items-center mb-8">
@@ -138,13 +141,46 @@ export default function MobileMenu({ session }: { session: any }) {
                           <User size={20} /> My Profile
                         </Link>
                       )}
-                      <Link 
-                        href="/dashboard/settings" 
+                      <Link
+                        href="/dashboard/settings"
                         onClick={toggleOpen}
                         className={`flex items-center gap-4 ${pathname === '/dashboard/settings' ? 'text-leather-pop font-bold' : 'text-leather-accent'}`}
                       >
                         <Settings size={20} /> Settings
                       </Link>
+
+                      {/* Admin Section - ADMIN and OWNER */}
+                      {(session?.user?.role === "ADMIN" || session?.user?.role === "OWNER") && (
+                        <>
+                          <div className="h-px bg-leather-600/50 my-2" />
+                          <div className="text-xs font-bold text-leather-500 uppercase tracking-wider mb-3">Admin</div>
+                          <Link
+                            href="/admin/reports"
+                            onClick={toggleOpen}
+                            className={`flex items-center gap-4 ${pathname.startsWith('/admin/reports') ? 'text-red-400 font-bold' : 'text-leather-accent'}`}
+                          >
+                            <Flag size={20} /> Reports
+                          </Link>
+                          <Link
+                            href="/admin"
+                            onClick={toggleOpen}
+                            className={`flex items-center gap-4 ${pathname === '/admin' ? 'text-red-400 font-bold' : 'text-leather-accent'}`}
+                          >
+                            <Shield size={20} /> Admin Console
+                          </Link>
+                        </>
+                      )}
+
+                      {/* Owner Section - OWNER only */}
+                      {session?.user?.role === "OWNER" && (
+                        <Link
+                          href="/owner"
+                          onClick={toggleOpen}
+                          className={`flex items-center gap-4 ${pathname === '/owner' ? 'text-yellow-400 font-bold' : 'text-leather-accent'}`}
+                        >
+                          <Crown size={20} /> Owner Command
+                        </Link>
+                      )}
 
                       <div className="h-px bg-leather-600/50 my-2" />
 

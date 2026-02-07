@@ -17,9 +17,9 @@ export const Button = ({ children, className, variant = "primary", size = "md", 
   };
 
   const sizes = {
-    sm: "px-3 py-1.5 text-xs rounded-lg",
-    md: "px-6 py-3 text-base rounded-xl",
-    lg: "px-8 py-4 text-lg rounded-2xl"
+    sm: "px-3 py-1.5 text-xs rounded-lg min-h-[44px] min-w-[44px]",
+    md: "px-6 py-3 text-base rounded-xl min-h-[44px]",
+    lg: "px-8 py-4 text-lg rounded-2xl min-h-[44px]"
   };
 
   return (

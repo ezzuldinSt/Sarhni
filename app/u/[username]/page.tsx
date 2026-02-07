@@ -53,10 +53,11 @@ export default async function UserProfile({ params }: { params: Promise<{ userna
             <div className="w-32 h-32 mx-auto rounded-full border-4 border-leather-pop mb-4 overflow-hidden relative shadow-xl">
                <Image
                  src={user.image || "/placeholder-avatar.png"}
-                 alt={user.username}
+                 alt={`Profile picture of ${user.username}`}
                  fill
                  sizes="128px"
                  className="object-cover"
+                 loading="lazy"
                />
             </div>
             <h1 className="text-3xl font-bold text-leather-accent mb-2">@{user.username}</h1>
@@ -90,12 +91,14 @@ export default async function UserProfile({ params }: { params: Promise<{ userna
 // --- Async component: streams confessions ---
 async function ProfileConfessions({ userId, isOwner }: { userId: string; isOwner: boolean }) {
   const confessions = await getCachedUserConfessions(userId);
+  const session = await auth();
 
   return (
     <ConfessionFeed
       initialConfessions={confessions}
       userId={userId}
       isOwner={isOwner}
+      currentUserId={session?.user?.id}
     />
   );
 }

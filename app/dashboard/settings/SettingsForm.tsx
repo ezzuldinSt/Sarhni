@@ -3,19 +3,26 @@
 import { useState, useEffect, useRef } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
-import { uploadImage } from "@/lib/actions/upload";
-import { updateUserProfile, deleteProfileImage } from "@/lib/actions/user"; // Import delete action
-import { toast } from "sonner";
-import { Trash2 } from "lucide-react"; // Import Icon
+import { UploadProgress } from "@/components/ui/UploadProgress";
+import { ConfirmDialogProvider, useConfirmDialog } from "@/components/ui/ConfirmDialog";
+import { useImageUpload } from "@/hooks/useImageUpload";
+import { updateUserProfile, deleteProfileImage } from "@/lib/actions/user";
+import { toastSuccess, toastError, toastLoading, toast } from "@/lib/toast";
+import { Trash2, ArrowLeft } from "lucide-react";
 
-export default function SettingsForm({ user }: { user: any }) {
+function SettingsFormContent({ user }: { user: any }) {
   // If user has no image, use placeholder
   const [preview, setPreview] = useState(user?.image || "/placeholder-avatar.png");
-  const [uploading, setUploading] = useState(false);
+  const [pendingFile, setPendingFile] = useState<File | null>(null);
+  const [uploadError, setUploadError] = useState<string | null>(null);
   const router = useRouter();
   const objectUrlRef = useRef<string | null>(null);
+
+  const { uploadProgress, isUploading, uploadSpeed, uploadImage, cancelUpload } = useImageUpload();
+  const { confirm } = useConfirmDialog();
 
   // Cleanup object URL on unmount or when preview changes to a non-blob URL
   useEffect(() => {
@@ -29,6 +36,7 @@ export default function SettingsForm({ user }: { user: any }) {
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      setUploadError(null);
       // Revoke previous object URL if it exists
       if (objectUrlRef.current && !objectUrlRef.current.startsWith("/")) {
         URL.revokeObjectURL(objectUrlRef.current);
@@ -36,14 +44,22 @@ export default function SettingsForm({ user }: { user: any }) {
       const objectUrl = URL.createObjectURL(file);
       objectUrlRef.current = objectUrl;
       setPreview(objectUrl);
+      setPendingFile(file);
     }
   };
 
-  // NEW: Handle Delete
+  // Handle Delete
   const handleDeleteImage = async () => {
-    if (!confirm("Are you sure you want to remove your profile picture?")) return;
+    const confirmed = await confirm({
+      title: "Remove Profile Picture",
+      message: "Are you sure you want to remove your profile picture? You can always add a new one later.",
+      confirmText: "Remove",
+      cancelText: "Cancel",
+      variant: "warning"
+    });
 
-    setUploading(true); // Lock buttons
+    if (!confirmed) return;
+
     const res = await deleteProfileImage();
 
     if (res?.success) {
@@ -52,58 +68,82 @@ export default function SettingsForm({ user }: { user: any }) {
         URL.revokeObjectURL(objectUrlRef.current);
         objectUrlRef.current = null;
       }
-      setPreview("/placeholder-avatar.png"); // Revert UI immediately
-      toast.success("Profile picture removed");
-      router.refresh(); // Refresh server data
+      setPreview("/placeholder-avatar.png");
+      toastSuccess("Profile picture removed");
+      router.refresh();
     } else {
-      toast.error("Failed to remove image");
+      toastError("Failed to remove image");
     }
-
-    setUploading(false); // Always reset uploading state
   };
 
-  const handleSubmit = async (formData: FormData) => {
-    setUploading(true);
-    const loadingToast = toast.loading("Updating profile...");
+  const handleUploadImage = async () => {
+    if (!pendingFile) return;
 
-    try {
-      const file = formData.get("avatar") as File;
+    setUploadError(null);
+    const result = await uploadImage(pendingFile);
 
-      if (file && file.size > 0) {
-        const uploadData = new FormData();
-        uploadData.append("file", file);
+    if (result.success && result.url) {
+      // Update profile with new image
+      const formData = new FormData();
+      formData.append("userId", user.id);
+      formData.append("imageUrl", result.url);
 
-        const uploadRes = await uploadImage(uploadData);
-
-        if ((uploadRes as any).success) {
-          formData.set("imageUrl", (uploadRes as any).url);
-        } else {
-          toast.error("Image upload failed");
-          return;
-        }
+      // Preserve existing bio
+      const bioInput = document.querySelector('textarea[name="bio"]') as HTMLTextAreaElement;
+      if (bioInput) {
+        formData.append("bio", bioInput.value);
       }
 
       const res = await updateUserProfile(formData);
       if (res?.error) {
-        toast.error(res.error);
+        toastError(res.error);
+        setUploadError(res.error);
+      } else {
+        toastSuccess("Profile picture updated!");
+        setPendingFile(null);
+        router.refresh();
+      }
+    } else {
+      setUploadError(result.error || "Upload failed");
+      toastError(result.error || "Upload failed");
+    }
+  };
+
+  const handleSubmit = async (formData: FormData) => {
+    const loadingToast = toastLoading("Updating profile...");
+
+    try {
+      const res = await updateUserProfile(formData);
+      if (res?.error) {
+        toastError(res.error);
         return;
       }
 
-      toast.success("Profile updated successfully!");
+      toastSuccess("Profile updated successfully!");
       router.refresh();
 
     } catch (error) {
       console.error(error);
-      toast.error("Something went wrong");
+      toastError("Something went wrong");
     } finally {
       toast.dismiss(loadingToast);
-      setUploading(false);
     }
   };
 
   return (
-    <Card>
-      <form action={handleSubmit} className="space-y-6">
+    <>
+      {/* Back Navigation Breadcrumb */}
+      <Link
+        href="/dashboard"
+        className="inline-flex items-center gap-2 text-leather-500 hover:text-leather-pop transition-colors mb-6 group"
+      >
+        <ArrowLeft size={20} className="group-hover:-translate-x-1 transition-transform" />
+        <span className="text-sm font-medium">Back to Dashboard</span>
+      </Link>
+
+      <Card>
+        <h2 className="text-2xl font-bold text-leather-accent mb-6">Settings</h2>
+        <form action={handleSubmit} className="space-y-6">
         <div className="flex flex-col items-center gap-4 mb-6">
           <div className="relative w-32 h-32 rounded-full border-4 border-leather-pop overflow-hidden shadow-xl">
             <Image
@@ -118,28 +158,52 @@ export default function SettingsForm({ user }: { user: any }) {
           <div className="flex items-center gap-2">
             <label className="cursor-pointer bg-leather-700 hover:bg-leather-600 text-leather-accent px-4 py-2 rounded-lg text-sm transition-colors shadow-md">
                 <span>Change Photo</span>
-                <input 
-                type="file" 
-                name="avatar" 
-                accept="image/*" 
-                className="hidden" 
+                <input
+                type="file"
+                name="avatar"
+                accept="image/*"
+                className="hidden"
                 onChange={handleFileChange}
+                disabled={isUploading}
                 />
             </label>
 
+            {/* Show upload button when file is pending */}
+            {pendingFile && !isUploading && (
+              <Button
+                type="button"
+                onClick={handleUploadImage}
+                className="bg-leather-pop text-leather-900 hover:bg-leather-popHover px-4 py-2 rounded-lg text-sm shadow-md"
+              >
+                Upload Photo
+              </Button>
+            )}
+
             {/* Only show delete button if current image is NOT the placeholder */}
-            {preview !== "/placeholder-avatar.png" && (
+            {preview !== "/placeholder-avatar.png" && !pendingFile && (
                 <button
                     type="button"
                     onClick={handleDeleteImage}
-                    disabled={uploading}
-                    className="bg-leather-900 border border-leather-600 text-red-400 hover:bg-red-900/20 p-2 rounded-lg transition-colors shadow-md"
-                    title="Remove Photo"
+                    disabled={isUploading}
+                    className="bg-leather-900 border border-leather-600 text-red-400 hover:bg-red-900/20 p-2 rounded-lg transition-colors shadow-md disabled:opacity-50"
+                    aria-label="Remove profile picture"
                 >
                     <Trash2 size={20} />
                 </button>
             )}
           </div>
+
+          {/* Upload Progress */}
+          {(isUploading || uploadError) && (
+            <div className="w-full">
+              <UploadProgress
+                percentage={uploadProgress?.percentage || 0}
+                speed={uploadSpeed}
+                onCancel={cancelUpload}
+                error={uploadError || undefined}
+              />
+            </div>
+          )}
         </div>
 
         <div>
@@ -154,10 +218,20 @@ export default function SettingsForm({ user }: { user: any }) {
         
         <input type="hidden" name="userId" value={user.id} />
         
-        <Button type="submit" disabled={uploading} className="w-full">
-          {uploading ? "Saving..." : "Save Changes"}
+        <Button type="submit" disabled={isUploading} className="w-full">
+          {isUploading ? "Uploading..." : "Save Changes"}
         </Button>
       </form>
     </Card>
+    </>
+  );
+}
+
+// Wrapper component that provides the ConfirmDialog context
+export default function SettingsForm(props: { user: any }) {
+  return (
+    <ConfirmDialogProvider>
+      <SettingsFormContent {...props} />
+    </ConfirmDialogProvider>
   );
 }

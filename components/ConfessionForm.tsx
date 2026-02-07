@@ -8,7 +8,7 @@ import { Button } from "./ui/Button";
 import { Card } from "./ui/Card";
 import { Switch } from "./ui/Switch";
 import { sendConfession } from "@/lib/actions/confess";
-import { toast } from "sonner";
+import { toastSuccess, toastError } from "@/lib/toast";
 import { Send } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -54,10 +54,10 @@ export default function ConfessionForm({ receiverId, usernamePath, user }: { rec
           reset({ content: savedContentRef.current });
           savedContentRef.current = null;
         }
-        toast.error(res.error);
+        toastError(res.error);
     } else {
         // Optional: Trigger a confetti or sound effect here
-        toast.success("Sent into the void! 🚀");
+        toastSuccess("Sent into the void! 🚀");
         savedContentRef.current = null; // Clear saved content on success
 
         // Reset the "Sent" view after 3 seconds so they can send another
@@ -108,7 +108,7 @@ export default function ConfessionForm({ receiverId, usernamePath, user }: { rec
                 <label className="text-leather-accent/80 text-sm font-bold uppercase tracking-widest">
                 Leave a message
                 </label>
-                <span className={`text-xs font-mono transition-colors ${charCount > 450 ? 'text-red-400 font-bold' : 'text-leather-500'}`}>
+                <span id="char-count" className={`text-xs font-mono transition-colors ${charCount > 450 ? 'text-red-400 font-bold' : 'text-leather-500'}`} aria-live="polite">
                     {charCount}/500
                 </span>
             </div>
@@ -117,12 +117,14 @@ export default function ConfessionForm({ receiverId, usernamePath, user }: { rec
             {...register("content")}
             className="w-full bg-leather-900/50 rounded-xl p-4 text-leather-accent placeholder-leather-600 focus:outline-none focus:ring-2 focus:ring-leather-pop resize-none h-32 transition-all"
             placeholder="Type something nice (or spicy)..."
+            aria-label="Message content"
+            aria-describedby="char-count"
             />
-            {errors.content && <p className="text-red-400 text-sm animate-pulse">{(errors.content as any).message}</p>}
+            {errors.content && <p className="text-red-400 text-sm animate-pulse" role="alert">{(errors.content as any).message}</p>}
 
             <div className="flex items-center justify-between mt-4">
             <div className="flex items-center gap-3">
-                <Switch isOn={!isAnon} onToggle={() => user ? setIsAnon(!isAnon) : toast.error("Login to reveal yourself!")} disabled={!user} />
+                <Switch isOn={!isAnon} onToggle={() => user ? setIsAnon(!isAnon) : toastError("Login to reveal yourself!")} disabled={!user} />
                 <div className="flex flex-col">
                     <span className={`text-sm font-bold transition-colors ${isAnon ? 'text-leather-500' : 'text-leather-pop'}`}>
                         {isAnon ? "Anonymous 👻" : user?.name || 'Me'}
