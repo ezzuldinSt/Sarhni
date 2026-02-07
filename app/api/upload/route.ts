@@ -124,7 +124,8 @@ export async function POST(request: NextRequest) {
     // Write the file
     await fs.writeFile(filePath, buffer);
 
-    return NextResponse.json({ success: true, url: `/uploads/${fileName}` });
+    // Return the API route URL (not the static path)
+    return NextResponse.json({ success: true, url: `/api/uploads/${fileName}` });
 
   } catch (error) {
     console.error("Upload error:", error);
