@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/Card";
 import { Copy, Check, Share2 } from "lucide-react";
-import { toast } from "sonner";
+import { toastSuccess } from "@/lib/toast";
 
 export default function ShareLinkCard({ username }: { username: string }) {
   const [copied, setCopied] = useState(false);
@@ -11,13 +11,13 @@ export default function ShareLinkCard({ username }: { username: string }) {
   useEffect(() => {
     setOrigin(window.location.origin);
   }, []);
-  
-  const link = origin ? `${origin}/u/${username}` : `sarhni.zhrworld.com/u/${username}`;
+
+  const link = origin ? `${origin}/u/${username}` : `${process.env.NEXT_PUBLIC_URL || 'https://sarhni.zhrworld.com'}/u/${username}`;
 
   const handleCopy = () => {
     navigator.clipboard.writeText(link);
     setCopied(true);
-    toast.success("Link copied to clipboard!");
+    toastSuccess("Link copied to clipboard!");
     setTimeout(() => setCopied(false), 2000);
   };
 

@@ -8,7 +8,14 @@ import { toggleBan, updateUserRole, deleteUserCompletely } from "@/lib/actions/a
 import { toastSuccess, toastError } from "@/lib/toast";
 import { Shield, ShieldAlert, Ban, Trash2, CheckCircle } from "lucide-react";
 
-function AdminDashboardContent({ users, viewerRole }: { users: any[], viewerRole: string }) {
+interface User {
+  id: string;
+  username: string;
+  role: string;
+  isBanned: boolean;
+}
+
+function AdminDashboardContent({ users, viewerRole }: { users: User[], viewerRole: string }) {
   const [userList, setUserList] = useState(users);
   const { confirm } = useConfirmDialog();
 
@@ -133,11 +140,11 @@ function AdminDashboardContent({ users, viewerRole }: { users: any[], viewerRole
 }
 
 // Wrapper component that provides the ConfirmDialog context
-export default function AdminDashboard({ users, viewerRole }: { users: any[], viewerRole: string }) {
+// NOTE: Since ConfirmDialogProvider is now in root layout, this wrapper is redundant
+// but kept for backwards compatibility
+export default function AdminDashboard({ users, viewerRole }: { users: User[], viewerRole: string }) {
   return (
-    <ConfirmDialogProvider>
-      <AdminDashboardContent users={users} viewerRole={viewerRole} />
-    </ConfirmDialogProvider>
+    <AdminDashboardContent users={users} viewerRole={viewerRole} />
   );
 }
 

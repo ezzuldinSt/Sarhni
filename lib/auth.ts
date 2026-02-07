@@ -4,11 +4,14 @@ import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
 
-// Extend the built-in types to include 'role'
+// Extend the built-in types to include 'role', 'username', and other custom fields
 declare module "next-auth" {
   interface User {
+    id: string;
+    username: string;
     role?: string;
     isBanned?: boolean;
+    image?: string | null;
   }
   interface Session {
     user: {
@@ -16,8 +19,8 @@ declare module "next-auth" {
       name?: string | null;
       email?: string | null;
       image?: string | null;
-      role?: string;      // <--- Added
-      isBanned?: boolean; // <--- Added
+      role?: string;
+      isBanned?: boolean;
     }
   }
 }
@@ -55,7 +58,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         token.sub = user.id;
         token.role = user.role;
         token.isBanned = user.isBanned;
-        token.username = (user as any).username;
+        token.username = user.username;
         token.image = user.image;
         token.lastChecked = Date.now();
       }

@@ -137,3 +137,43 @@ export async function fetchConfessions(userId: string, offset: number = 0) {
     return [];
   }
 }
+
+export async function editConfession(confessionId: string, newContent: string) {
+  const session = await auth();
+  if (!session?.user?.id) return { error: "You must be logged in." };
+
+  // 1. Verify ownership and check time window
+  const confession = await prisma.confession.findUnique({
+    where: { id: confessionId },
+    select: { senderId: true, createdAt: true, content: true }
+  });
+
+  if (!confession) return { error: "Message not found." };
+
+  if (confession.senderId !== session.user.id) {
+    return { error: "Unauthorized: You can only edit your own sent messages." };
+  }
+
+  // 2. Check if within 5-minute window (300 seconds)
+  const now = new Date();
+  const timeDiff = (now.getTime() - confession.createdAt.getTime()) / 1000; // in seconds
+  const EDIT_WINDOW_SECONDS = 5 * 60; // 5 minutes
+
+  if (timeDiff > EDIT_WINDOW_SECONDS) {
+    return { error: "Edit window has expired. Messages can only be edited within 5 minutes of sending." };
+  }
+
+  // 3. Update the confession
+  await prisma.confession.update({
+    where: { id: confessionId },
+    data: {
+      content: newContent,
+      editedAt: now
+    }
+  });
+
+  // 4. Refresh caches
+  revalidateTag("user-profiles", "max");
+  revalidatePath("/dashboard/sent", "page");
+  return { success: true };
+}

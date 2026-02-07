@@ -23,6 +23,12 @@ export default function ConfessionFeed({ initialConfessions, userId, isOwner, gr
   const [error, setError] = useState<string | null>(null);
   const offsetRef = useRef(initialConfessions.length);
   const existingIdsRef = useRef(new Set(initialConfessions.map(c => c.id)));
+  const [isMounted, setIsMounted] = useState(false);
+
+  // Fix hydration issue by ensuring window is accessed only after mount
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   const loaderRef = useRef<HTMLDivElement>(null);
 
@@ -91,7 +97,11 @@ export default function ConfessionFeed({ initialConfessions, userId, isOwner, gr
     : "space-y-6";
 
   // Determine if this is a sent view (based on URL or prop)
-  const isSentView = typeof window !== "undefined" && window.location.pathname === "/dashboard/sent";
+  // Use state to avoid hydration mismatch
+  const [isSentView, setIsSentView] = useState(false);
+  useEffect(() => {
+    setIsSentView(window.location.pathname === "/dashboard/sent");
+  }, []);
 
   return (
     <section aria-label="Confessions feed">

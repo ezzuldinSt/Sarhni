@@ -1,21 +1,32 @@
 import { useState } from "react";
-import { toast } from "sonner";
+import { toastSuccess, toastError } from "@/lib/toast";
 import { deleteConfession, togglePin, replyToConfession } from "@/lib/actions/manage";
+import { useConfirmDialog } from "@/components/ui/ConfirmDialog";
 
 export function useConfessionActions(initialPinned: boolean, initialReply: string | null) {
   const [isDeleting, setIsDeleting] = useState(false);
   const [isPinned, setIsPinned] = useState(initialPinned);
   const [optimisticReply, setOptimisticReply] = useState(initialReply);
+  const { confirm } = useConfirmDialog();
 
   const handleDelete = async (id: string) => {
-    if (!confirm("Are you sure you want to delete this message?")) return;
+    const confirmed = await confirm({
+      title: "Delete Message",
+      message: "Are you sure you want to delete this message? This action cannot be undone.",
+      confirmText: "Delete",
+      cancelText: "Cancel",
+      variant: "danger"
+    });
+
+    if (!confirmed) return;
+
     setIsDeleting(true);
     const res = await deleteConfession(id);
     if (res?.error) {
-      toast.error(res.error);
+      toastError(res.error);
       setIsDeleting(false);
     } else {
-      toast.success("Message deleted.");
+      toastSuccess("Message deleted.");
     }
   };
 
@@ -24,10 +35,10 @@ export function useConfessionActions(initialPinned: boolean, initialReply: strin
     setIsPinned(newState);
     const res = await togglePin(id);
     if (res?.error) {
-      toast.error(res.error);
+      toastError(res.error);
       setIsPinned(!newState);
     } else {
-      toast.success(newState ? "Pinned!" : "Unpinned.");
+      toastSuccess(newState ? "Pinned!" : "Unpinned.");
     }
   };
 
@@ -42,9 +53,9 @@ export function useConfessionActions(initialPinned: boolean, initialReply: strin
     if (res?.error) {
       // Revert on error
       setOptimisticReply(previousReply);
-      toast.error(res.error);
+      toastError(res.error);
     } else {
-      toast.success("Replied!");
+      toastSuccess("Replied!");
       onClose();
     }
   };

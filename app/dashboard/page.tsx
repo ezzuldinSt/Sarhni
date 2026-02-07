@@ -4,6 +4,8 @@ import { prisma } from "@/lib/prisma";
 import { Card } from "@/components/ui/Card";
 import ConfessionFeed from "@/components/ConfessionFeed";
 import ShareLinkCard from "@/components/ShareLinkCard";
+import WelcomeModalWrapper from "@/components/WelcomeModalWrapper";
+import { ConfessionFeedErrorBoundary } from "@/components/ConfessionFeedErrorBoundary";
 import { Mail, Send, Inbox, Loader2 } from "lucide-react";
 
 export default async function DashboardPage() {
@@ -19,55 +21,58 @@ export default async function DashboardPage() {
   });
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-500">
-      <div className="flex flex-col md:flex-row gap-8 justify-between items-start">
+    <>
+      <WelcomeModalWrapper username={user?.username} />
+      <div className="space-y-8 animate-in fade-in duration-500">
+        <div className="flex flex-col md:flex-row gap-8 justify-between items-start">
+          <div>
+            <h1 className="text-3xl font-bold text-leather-pop mb-2">Hello, {user?.username} 👋</h1>
+            <p className="text-leather-500">Ready to see what people really think?</p>
+          </div>
+        </div>
+
+        {/* --- SHARE LINK + STATS (renders immediately) --- */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="lg:col-span-2">
+             <ShareLinkCard username={user?.username || ""} />
+          </div>
+          <div className="grid grid-cols-2 lg:grid-cols-1 gap-4">
+            <Card className="flex flex-col items-center justify-center p-6 bg-leather-800/50 hover:bg-leather-800 transition-colors">
+              <Inbox className="w-8 h-8 text-leather-pop mb-2 opacity-80" />
+              <span className="text-3xl font-bold text-white mb-1">{user?._count.receivedConfessions ?? 0}</span>
+              <span className="text-leather-500 uppercase text-[10px] tracking-widest text-center">Received</span>
+            </Card>
+            <Card className="flex flex-col items-center justify-center p-6 bg-leather-800/50 hover:bg-leather-800 transition-colors">
+              <Send className="w-8 h-8 text-leather-pop mb-2 opacity-80" />
+              <span className="text-3xl font-bold text-white mb-1">{user?._count.sentConfessions ?? 0}</span>
+              <span className="text-leather-500 uppercase text-[10px] tracking-widest text-center">Sent</span>
+            </Card>
+          </div>
+        </div>
+
+        {/* --- INBOX (streams in) --- */}
         <div>
-          <h1 className="text-3xl font-bold text-leather-pop mb-2">Hello, {user?.username} 👋</h1>
-          <p className="text-leather-500">Ready to see what people really think?</p>
-        </div>
-      </div>
+          <div className="flex items-center gap-2 mb-6">
+             <Mail className="text-leather-pop" />
+             <h2 className="text-xl font-bold text-leather-accent">Your Inbox</h2>
+          </div>
 
-      {/* --- SHARE LINK + STATS (renders immediately) --- */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2">
-           <ShareLinkCard username={user?.username || ""} />
-        </div>
-        <div className="grid grid-cols-2 lg:grid-cols-1 gap-4">
-          <Card className="flex flex-col items-center justify-center p-6 bg-leather-800/50 hover:bg-leather-800 transition-colors">
-            <Inbox className="w-8 h-8 text-leather-pop mb-2 opacity-80" />
-            <span className="text-3xl font-bold text-white mb-1">{user?._count.receivedConfessions ?? 0}</span>
-            <span className="text-leather-500 uppercase text-[10px] tracking-widest text-center">Received</span>
-          </Card>
-          <Card className="flex flex-col items-center justify-center p-6 bg-leather-800/50 hover:bg-leather-800 transition-colors">
-            <Send className="w-8 h-8 text-leather-pop mb-2 opacity-80" />
-            <span className="text-3xl font-bold text-white mb-1">{user?._count.sentConfessions ?? 0}</span>
-            <span className="text-leather-500 uppercase text-[10px] tracking-widest text-center">Sent</span>
-          </Card>
-        </div>
-      </div>
-
-      {/* --- INBOX (streams in) --- */}
-      <div>
-        <div className="flex items-center gap-2 mb-6">
-           <Mail className="text-leather-pop" />
-           <h2 className="text-xl font-bold text-leather-accent">Your Inbox</h2>
+          <Suspense fallback={<InboxSkeleton />}>
+            <DashboardInbox userId={session.user.id} username={user?.username} />
+          </Suspense>
         </div>
 
-        <Suspense fallback={<InboxSkeleton />}>
-          <DashboardInbox userId={session.user.id} />
+        {/* --- SENT MESSAGES (streams in) --- */}
+        <Suspense fallback={<SentSkeleton />}>
+          <DashboardSent userId={session.user.id} />
         </Suspense>
       </div>
-
-      {/* --- SENT MESSAGES (streams in) --- */}
-      <Suspense fallback={<SentSkeleton />}>
-        <DashboardSent userId={session.user.id} />
-      </Suspense>
-    </div>
+    </>
   );
 }
 
 // --- Async component: streams inbox confessions ---
-async function DashboardInbox({ userId }: { userId: string }) {
+async function DashboardInbox({ userId, username }: { userId: string; username?: string }) {
   const confessions = await prisma.confession.findMany({
     where: { receiverId: userId },
     orderBy: { createdAt: "desc" },
@@ -79,12 +84,16 @@ async function DashboardInbox({ userId }: { userId: string }) {
   });
 
   return (
-    <ConfessionFeed
-      initialConfessions={confessions}
-      userId={userId}
-      isOwner={true}
-      gridLayout={true}
-    />
+    <ConfessionFeedErrorBoundary>
+      <ConfessionFeed
+        initialConfessions={confessions}
+        userId={userId}
+        isOwner={true}
+        gridLayout={true}
+        username={username}
+        currentUserId={userId}
+      />
+    </ConfessionFeedErrorBoundary>
   );
 }
 
@@ -97,7 +106,18 @@ async function DashboardSent({ userId }: { userId: string }) {
     include: { receiver: { select: { username: true } } },
   });
 
-  if (sentConfessions.length === 0) return null;
+  if (sentConfessions.length === 0) return <div className="pt-8 border-t border-leather-600/20 text-center py-12">
+    <div className="flex flex-col items-center justify-center">
+      <div className="w-20 h-20 mb-4 opacity-50">
+        <svg viewBox="0 0 200 200" className="w-full h-full" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M40 100 L70 130 L160 50" className="stroke-leather-600" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
+          <circle cx="100" cy="50" r="20" className="fill-leather-600/10"/>
+        </svg>
+      </div>
+      <h3 className="text-lg font-bold text-leather-accent mb-1">No sent messages yet</h3>
+      <p className="text-sm text-leather-500 max-w-xs mx-auto">Messages you send will appear here</p>
+    </div>
+  </div>;
 
   return (
     <div className="pt-8 border-t border-leather-600/20">

@@ -1,37 +1,28 @@
 "use client";
-import { signIn } from "next-auth/react"; // Client side sign-in wrapper
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useState, useTransition } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
+import { loginUser } from "@/lib/actions/auth";
 
 export default function LoginPage() {
   const [error, setError] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
+  const [isPending, startTransition] = useTransition();
   const router = useRouter();
 
-  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    setIsLoading(true);
-    const formData = new FormData(e.currentTarget);
-    const username = formData.get("username") as string;
-    const password = formData.get("password") as string;
+  async function handleSubmit(formData: FormData) {
+    setError("");
+    startTransition(async () => {
+      const result = await loginUser(null, formData);
 
-    const res = await signIn("credentials", {
-      username,
-      password,
-      redirect: false,
+      if (result?.error) {
+        setError(result.error);
+      } else {
+        router.push("/dashboard");
+        router.refresh();
+      }
     });
-
-    if (res?.error) {
-      setError("Invalid credentials. Try again!");
-      setIsLoading(false);
-    } else {
-      router.push("/dashboard");
-      router.refresh();
-      // Don't stop loading here to prevent flashing
-    }
   }
 
   return (
@@ -39,31 +30,35 @@ export default function LoginPage() {
       <div className="w-full max-w-md">
         <h1 className="text-3xl font-bold text-center text-leather-pop mb-8">Welcome Back</h1>
         <Card>
-          <form onSubmit={handleSubmit} className="space-y-6">
+          <form action={handleSubmit} className="space-y-6">
             <div>
-              <label className="block text-sm font-bold mb-2 text-leather-accent">Username</label>
+              <label htmlFor="username" className="block text-sm font-bold mb-2 text-leather-accent">Username</label>
               <input
+                id="username"
                 name="username"
                 type="text"
                 required
+                autoComplete="username"
                 className="w-full bg-leather-900 rounded-xl p-3 text-leather-accent focus:ring-2 focus:ring-leather-pop outline-none"
               />
             </div>
             <div>
-              <label className="block text-sm font-bold mb-2 text-leather-accent">Password</label>
+              <label htmlFor="password" className="block text-sm font-bold mb-2 text-leather-accent">Password</label>
               <input
+                id="password"
                 name="password"
                 type="password"
                 required
+                autoComplete="current-password"
                 className="w-full bg-leather-900 rounded-xl p-3 text-leather-accent focus:ring-2 focus:ring-leather-pop outline-none"
               />
             </div>
 
             {error && (
-              <p className="text-red-400 text-sm text-center bg-red-900/20 p-2 rounded-lg">{error}</p>
+              <p className="text-red-400 text-sm text-center bg-red-900/20 p-2 rounded-lg" role="alert">{error}</p>
             )}
 
-            <Button type="submit" className="w-full" isLoading={isLoading}>Login</Button>
+            <Button type="submit" className="w-full" isLoading={isPending}>Login</Button>
           </form>
           <p className="mt-6 text-center text-sm text-leather-500">
             New here?{" "}

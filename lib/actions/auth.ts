@@ -6,9 +6,13 @@ import { redirect } from "next/navigation";
 import { Prisma } from "@prisma/client";
 import { headers } from "next/headers";
 import { createRateLimiter } from "@/lib/rate-limit";
+import { signIn } from "@/lib/auth";
 
 // Rate limiter for registration: 3 attempts per hour per IP
 const checkRegistrationRateLimit = createRateLimiter(3, 60 * 60 * 1000);
+
+// Rate limiter for login: 5 attempts per 15 minutes per IP (more restrictive for security)
+const checkLoginRateLimit = createRateLimiter(5, 15 * 60 * 1000);
 
 const registerSchema = z.object({
   username: z.string().min(3).regex(/^[a-zA-Z0-9_]+$/),
@@ -55,5 +59,78 @@ export async function registerUser(prevState: any, formData: FormData) {
   }
 
   redirect("/login?registered=true");
+}
+
+const loginSchema = z.object({
+  username: z.string().min(1, "Username is required"),
+  password: z.string().min(1, "Password is required"),
+});
+
+export async function loginUser(prevState: any, formData: FormData) {
+  // Get IP address for rate limiting
+  const headerList = await headers();
+  let ip = headerList.get("x-real-ip");
+
+  if (!ip) {
+    const forwarded = headerList.get("x-forwarded-for");
+    if (forwarded) {
+      ip = forwarded.split(",")[0].trim();
+    }
+  }
+
+  ip = ip || "unknown";
+
+  // Check rate limit
+  const rateLimit = checkLoginRateLimit(ip);
+  if (!rateLimit.success) {
+    const timeLeft = Math.ceil((rateLimit.resetAt! - Date.now()) / 1000);
+    return { error: `Too many login attempts. Please wait ${timeLeft} seconds.` };
+  }
+
+  const data = Object.fromEntries(formData.entries());
+  const validated = loginSchema.safeParse(data);
+
+  if (!validated.success) {
+    return { error: validated.error.errors[0].message };
+  }
+
+  const { username, password } = validated.data;
+  const normalizedUsername = username.toLowerCase();
+
+  try {
+    const user = await prisma.user.findUnique({
+      where: { username: normalizedUsername },
+    });
+
+    if (!user || !user.password) {
+      return { error: "Invalid username or password." };
+    }
+
+    // Check if user is banned
+    if (user.isBanned) {
+      return { error: "This account has been banned." };
+    }
+
+    const passwordMatch = await bcrypt.compare(password, user.password);
+    if (!passwordMatch) {
+      return { error: "Invalid username or password." };
+    }
+
+    // Sign in the user using NextAuth
+    const result = await signIn("credentials", {
+      username: normalizedUsername,
+      password,
+      redirect: false,
+    });
+
+    if (result?.error) {
+      return { error: "Login failed. Please try again." };
+    }
+
+    return { success: true };
+  } catch (error) {
+    console.error("Login error:", error);
+    return { error: "An unexpected error occurred. Please try again." };
+  }
 }
 

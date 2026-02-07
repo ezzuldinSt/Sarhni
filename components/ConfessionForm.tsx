@@ -20,6 +20,8 @@ export default function ConfessionForm({ receiverId, usernamePath, user }: { rec
   const [isAnon, setIsAnon] = useState(true);
   const [isSent, setIsSent] = useState(false); // New state for success view
   const savedContentRef = useRef<string | null>(null); // Store content for error recovery
+  const formId = "confession-form";
+  const contentErrorId = "content-error";
 
   const { register, handleSubmit, reset, watch, formState: { errors, isSubmitting } } = useForm({
     resolver: zodResolver(schema)
@@ -71,24 +73,28 @@ export default function ConfessionForm({ receiverId, usernamePath, user }: { rec
         
         {/* SUCCESS VIEW */}
         {isSent ? (
-          <motion.div 
+          <motion.div
             key="success"
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.9 }}
             className="flex flex-col items-center justify-center py-12 text-center space-y-4"
+            role="status"
+            aria-live="polite"
+            aria-atomic="true"
           >
-            <div className="w-16 h-16 bg-success-bg text-success rounded-full flex items-center justify-center mb-2">
+            <div className="w-16 h-16 bg-success-bg text-success rounded-full flex items-center justify-center mb-2" aria-hidden="true">
               <Send size={32} />
             </div>
             <h3 className="text-2xl font-bold text-white">Message Sent!</h3>
             <p className="text-leather-500 max-w-xs mx-auto">
               Your secret is safe with us. Want to send another?
             </p>
-            <Button 
-                variant="secondary" 
+            <Button
+                variant="secondary"
                 onClick={() => setIsSent(false)}
                 className="mt-4"
+                aria-label="Send another message"
             >
                 Send Another
             </Button>
@@ -96,46 +102,100 @@ export default function ConfessionForm({ receiverId, usernamePath, user }: { rec
         ) : (
 
         /* FORM VIEW */
-        <motion.form 
+        <motion.form
             key="form"
+            id={formId}
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            onSubmit={handleSubmit(onSubmit)} 
+            onSubmit={handleSubmit(onSubmit)}
             className="space-y-4"
+            noValidate
         >
             <div className="flex justify-between items-center mb-2">
-                <label className="text-leather-accent/80 text-sm font-bold uppercase tracking-widest">
+                <label
+                  htmlFor="confession-content"
+                  className="text-leather-accent/80 text-sm font-bold uppercase tracking-widest"
+                >
                 Leave a message
                 </label>
-                <span id="char-count" className={`text-xs font-mono transition-colors ${charCount > 450 ? 'text-red-400 font-bold' : 'text-leather-500'}`} aria-live="polite">
+                <span
+                  id="char-count"
+                  className={`text-xs font-mono transition-colors ${charCount > 450 ? 'text-red-400 font-bold' : 'text-leather-500'}`}
+                  aria-live="polite"
+                  aria-atomic="true"
+                >
                     {charCount}/500
                 </span>
             </div>
 
             <textarea
-            {...register("content")}
-            className="w-full bg-leather-900/50 rounded-xl p-4 text-leather-accent placeholder-leather-600 focus:outline-none focus:ring-2 focus:ring-leather-pop resize-none h-32 transition-all"
-            placeholder="Type something nice (or spicy)..."
-            aria-label="Message content"
-            aria-describedby="char-count"
+              id="confession-content"
+              {...register("content")}
+              className="w-full bg-leather-900/50 rounded-xl p-4 text-leather-accent placeholder-leather-600 focus:outline-none focus:ring-2 focus:ring-leather-pop resize-none h-32 transition-all"
+              placeholder="Type something nice (or spicy)..."
+              aria-label="Write your anonymous message"
+              aria-describedby={errors.content ? `${contentErrorId} char-count` : "char-count"}
+              aria-invalid={errors.content ? "true" : "false"}
+              aria-required="true"
+              maxLength={500}
             />
-            {errors.content && <p className="text-red-400 text-sm animate-pulse" role="alert">{(errors.content as any).message}</p>}
+            {errors.content && (
+              <p
+                id={contentErrorId}
+                className="text-red-400 text-sm animate-pulse"
+                role="alert"
+                aria-live="assertive"
+              >
+                {(errors.content as any).message}
+              </p>
+            )}
 
             <div className="flex items-center justify-between mt-4">
-            <div className="flex items-center gap-3">
-                <Switch isOn={!isAnon} onToggle={() => user ? setIsAnon(!isAnon) : toastError("Login to reveal yourself!")} disabled={!user} />
+            <div className="flex items-center gap-3" role="group" aria-label="Message identity settings">
+                <Switch
+                  isOn={!isAnon}
+                  onToggle={() => user ? setIsAnon(!isAnon) : toastError("Login to reveal yourself!")}
+                  disabled={!user}
+                  aria-label={isAnon ? "Send anonymously - currently enabled" : "Reveal your identity - currently disabled"}
+                />
                 <div className="flex flex-col">
-                    <span className={`text-sm font-bold transition-colors ${isAnon ? 'text-leather-500' : 'text-leather-pop'}`}>
+                    <span
+                      className={`text-sm font-bold transition-colors ${isAnon ? 'text-leather-500' : 'text-leather-pop'}`}
+                      aria-live="polite"
+                    >
                         {isAnon ? "Anonymous 👻" : user?.name || 'Me'}
                     </span>
-                    {!user && <span className="text-[10px] text-leather-600 cursor-pointer hover:text-leather-pop">Login to reveal</span>}
+                    {!user && (
+                      <span
+                        className="text-[10px] text-leather-600 cursor-pointer hover:text-leather-pop"
+                        role="button"
+                        tabIndex={0}
+                        onClick={() => {
+                          // Navigate to login
+                          window.location.href = '/login';
+                        }}
+                        onKeyPress={(e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            window.location.href = '/login';
+                          }
+                        }}
+                      >
+                        Login to reveal
+                      </span>
+                    )}
                 </div>
             </div>
-            
-            <Button type="submit" isLoading={isSubmitting} className="group">
+
+            <Button
+              type="submit"
+              isLoading={isSubmitting}
+              className="group"
+              disabled={isSubmitting}
+              aria-label={isSubmitting ? "Sending message..." : "Send your anonymous message"}
+            >
                 <span className="flex items-center gap-2">
-                    Send <Send size={16} className="group-hover:translate-x-1 transition-transform" />
+                    Send <Send size={16} className="group-hover:translate-x-1 transition-transform" aria-hidden="true" />
                 </span>
             </Button>
             </div>

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { registerUser } from "@/lib/actions/auth";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
+import { PasswordInput } from "@/components/ui/PasswordInput";
 
 export default function RegisterPage() {
   const [state, action] = useFormState(registerUser, null);
@@ -15,8 +16,9 @@ export default function RegisterPage() {
         <Card>
           <form action={action} className="space-y-6">
             <div>
-              <label className="block text-sm font-bold mb-2 text-leather-accent">Username</label>
+              <label htmlFor="username" className="block text-sm font-bold mb-2 text-leather-accent">Username</label>
               <input
+                id="username"
                 name="username"
                 type="text"
                 required
@@ -26,17 +28,16 @@ export default function RegisterPage() {
             </div>
             <div>
               <label className="block text-sm font-bold mb-2 text-leather-accent">Password</label>
-              <input
+              <PasswordInput
                 name="password"
-                type="password"
                 required
-                className="w-full bg-leather-900 rounded-xl p-3 text-leather-accent focus:ring-2 focus:ring-leather-pop outline-none"
                 placeholder="••••••"
+                className="w-full"
               />
             </div>
-            
+
             {state?.error && (
-              <p className="text-red-400 text-sm text-center bg-red-900/20 p-2 rounded-lg">{state.error}</p>
+              <p className="text-red-400 text-sm text-center bg-red-900/20 p-2 rounded-lg" role="alert">{state.error}</p>
             )}
 
             <SubmitButton />

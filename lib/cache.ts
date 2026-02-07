@@ -71,15 +71,33 @@ export const getCachedAdminUsers = unstable_cache(
 
 export const getCachedSearchResults = unstable_cache(
   async (query: string) => {
-    return prisma.user.findMany({
-      where: {
-        username: { contains: query, mode: "insensitive" },
-        isBanned: false,
-      },
-      select: { username: true, image: true },
-      take: 5,
-    });
+    // Sanitize query to prevent cache key issues
+    const sanitizedQuery = query.trim().toLowerCase();
+
+    if (!sanitizedQuery || sanitizedQuery.length < 2) {
+      return [];
+    }
+
+    try {
+      const results = await prisma.user.findMany({
+        where: {
+          username: { contains: sanitizedQuery, mode: "insensitive" },
+          isBanned: false,
+        },
+        select: { username: true, image: true },
+        take: 5,
+        orderBy: { username: 'asc' }, // Consistent ordering for better cache hits
+      });
+
+      return results;
+    } catch (error) {
+      console.error(`Search cache error for query "${sanitizedQuery}":`, error);
+      return [];
+    }
   },
-  ["user-search"],
-  { revalidate: 60, tags: ["user-search"] }
+  ["user-search"], // Next.js automatically includes query in cache key
+  {
+    revalidate: 60, // Cache for 60 seconds
+    tags: ["user-search"], // Invalidate when users update profiles
+  }
 );

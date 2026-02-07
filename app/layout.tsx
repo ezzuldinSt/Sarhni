@@ -2,7 +2,9 @@ import type { Metadata } from "next";
 import { Varela_Round } from "next/font/google";
 import "./globals.css";
 import Navbar from "@/components/Navbar";
-import { Toaster } from "sonner"; // <-- IMPORT SONNER
+import { Toaster } from "sonner";
+import { ConfirmDialogProvider } from "@/components/ui/ConfirmDialog";
+import { ErrorBoundaryWrapper } from "@/components/ErrorBoundaryWrapper";
 
 const varela = Varela_Round({
   weight: "400",
@@ -38,7 +40,11 @@ export default function RootLayout({
         <div className="fixed inset-0 pointer-events-none opacity-[0.03] bg-leather-texture z-base bg-repeat" />
         <Navbar />
         <main className="container mx-auto px-4 py-8">
-          {children}
+          <ErrorBoundaryWrapper>
+            <ConfirmDialogProvider>
+              {children}
+            </ConfirmDialogProvider>
+          </ErrorBoundaryWrapper>
         </main>
         {/* ADD THE TOASTER COMPONENT HERE */}
         <Toaster

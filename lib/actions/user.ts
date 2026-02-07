@@ -34,7 +34,9 @@ export async function updateUserProfile(formData: FormData) {
     data: data,
   });
 
+  // Revalidate all user-related caches
   revalidateTag("user-profiles", "max");
+  revalidateTag("user-search", "max"); // Invalidate search cache when profile changes
   revalidatePath("/dashboard/settings", "page");
   revalidatePath(`/u/${userId}`, "page");
   return { success: true };
@@ -89,6 +91,7 @@ export async function deleteProfileImage() {
 
   // 5. Revalidate caches
   revalidateTag("user-profiles", "max");
+  revalidateTag("user-search", "max"); // Invalidate search cache when image changes
   revalidatePath("/dashboard/settings", "page");
   revalidatePath(`/u/${session.user.name}`, "page");
 
