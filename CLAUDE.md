@@ -87,7 +87,7 @@ Server Components fetch data via Prisma directly in `page.tsx` files. Mutations 
 ├── Dockerfile                    # Multi-stage Docker build
 ├── docker-compose.yml            # Container orchestration
 ├── next.config.mjs               # Next.js configuration
-└── middleware.ts                 # Route protection middleware
+└── proxy.ts                      # Route protection proxy
 ```
 
 ---
@@ -141,7 +141,7 @@ model Confession {
 - **Session Callback:** Refreshes user data every 5 minutes to catch ban/role changes
 - **Ban Enforcement:** Blocked at login and verified in session callback
 
-### Middleware (`middleware.ts`)
+### Proxy (`proxy.ts`)
 - **Protected Routes:** `/dashboard`, `/admin`, `/owner`
 - **Redirects:** Authenticated users away from `/login`, `/register`
 - **Cookie Detection:** `authjs.session-token`, `__Secure-authjs.session-token`, `next-auth.session-token`
